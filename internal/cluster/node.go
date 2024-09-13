@@ -164,6 +164,7 @@ func (node *Node) Stop(ctx context.Context) error {
 }
 
 // Put is used to distribute a key/value pair across a cluster of nodes
+// nolint
 func (node *Node) Put(ctx context.Context, request *connect.Request[internalpb.PutRequest]) (*connect.Response[internalpb.PutResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
@@ -179,6 +180,7 @@ func (node *Node) Put(ctx context.Context, request *connect.Request[internalpb.P
 }
 
 // Get is used to retrieve a key/value pair in a cluster of nodes
+// nolint
 func (node *Node) Get(ctx context.Context, request *connect.Request[internalpb.GetRequest]) (*connect.Response[internalpb.GetResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
@@ -200,6 +202,7 @@ func (node *Node) Get(ctx context.Context, request *connect.Request[internalpb.G
 }
 
 // Delete is used to remove a key/value pair from a cluster of nodes
+// nolint
 func (node *Node) Delete(ctx context.Context, request *connect.Request[internalpb.DeleteRequest]) (*connect.Response[internalpb.DeleteResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {

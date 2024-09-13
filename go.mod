@@ -28,6 +28,7 @@ require (
 	github.com/miekg/dns v1.1.26 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
+	github.com/stretchr/objx v0.5.0 // indirect
 	golang.org/x/crypto v0.21.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect

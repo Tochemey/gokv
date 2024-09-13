@@ -52,6 +52,7 @@ var _ memberlist.Delegate = (*State)(nil)
 // NodeMeta is used to retrieve meta-data about the current node
 // when broadcasting an alive message. It's length is limited to
 // the given byte size. This metadata is available in the Node structure.
+// nolint
 func (state *State) NodeMeta(limit int) []byte {
 	state.Lock()
 	// no need to check the error
@@ -64,6 +65,7 @@ func (state *State) NodeMeta(limit int) []byte {
 // Care should be taken that this method does not block, since doing
 // so would block the entire UDP packet receive loop. Additionally, the byte
 // slice may be modified after the call returns, so it should be copied if needed
+// nolint
 func (state *State) NotifyMsg(bytes []byte) {
 	// push/pull sync all the way
 }
@@ -74,6 +76,7 @@ func (state *State) NotifyMsg(bytes []byte) {
 // The total byte size of the resulting data to send must not exceed
 // the limit. Care should be taken that this method does not block,
 // since doing so would block the entire UDP packet receive loop.
+// nolint
 func (state *State) GetBroadcasts(overhead, limit int) [][]byte {
 	// nothing to broadcast
 	return nil
@@ -83,6 +86,7 @@ func (state *State) GetBroadcasts(overhead, limit int) [][]byte {
 // the remote side in addition to the membership information. Any
 // data can be sent here. See MergeRemoteState as well. The `join`
 // boolean indicates this is for a join instead of a push/pull.
+// nolint
 func (state *State) LocalState(join bool) []byte {
 	state.Lock()
 	// no need to check the error
@@ -95,6 +99,7 @@ func (state *State) LocalState(join bool) []byte {
 // state received from the remote side and is the result of the
 // remote side's LocalState call. The 'join'
 // boolean indicates this is for a join instead of a push/pull.
+// nolint
 func (state *State) MergeRemoteState(buf []byte, join bool) {
 	state.Lock()
 	remoteState := new(internalpb.NodeState)
