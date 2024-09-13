@@ -22,37 +22,26 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
-import (
-	"fmt"
-	"time"
-)
+import "errors"
 
-type EventType int
-
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
+// booleanValidator implements Validator.
+type booleanValidator struct {
+	boolCheck  bool
+	errMessage string
 }
 
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+// NewBooleanValidator creates a new boolean validator that returns an error message if condition is false
+// This validator will come handy when dealing with conditional validation
+func NewBooleanValidator(boolCheck bool, errMessage string) Validator {
+	return &booleanValidator{boolCheck: boolCheck, errMessage: errMessage}
+}
+
+// Validate returns an error if boolean check is false
+func (v booleanValidator) Validate() error {
+	if !v.boolCheck {
+		return errors.New(v.errMessage)
+	}
+	return nil
 }

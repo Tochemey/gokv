@@ -38,25 +38,20 @@ import (
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/atomic"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
-	"github.com/tochemey/gokv/discovery"
 	"github.com/tochemey/gokv/internal/errorschain"
 	"github.com/tochemey/gokv/internal/http"
 	"github.com/tochemey/gokv/internal/internalpb"
 	"github.com/tochemey/gokv/internal/internalpb/internalpbconnect"
 	"github.com/tochemey/gokv/internal/tcp"
-	"github.com/tochemey/gokv/log"
 )
 
 // Node defines the cluster node
 type Node struct {
 	internalpbconnect.UnimplementedKVServiceHandler
 
-	// host defines the host address
-	host string
-	// port defines the gRCP port for client connections
-	port       int
-	gossipPort int
+	config *Config
 
 	// state holds the node state
 	// through memberlist this state will be eventually gossiped to the rest of the cluster
@@ -65,59 +60,46 @@ type Node struct {
 	memberConfig *memberlist.Config
 	memberlist   *memberlist.Memberlist
 
-	// Specifies the actor system name
-	name string
-	// Specifies the logger to use
-	logger log.Logger
-
 	// states whether the actor system has started or not
-	started         *atomic.Bool
-	shutdownTimeout time.Duration
+	started *atomic.Bool
 
 	httpServer *nethttp.Server
 	mu         *sync.Mutex
 
 	clusterClient      *Client
-	provider           discovery.Provider
 	eventsChan         chan *Event
 	stopEventsListener chan struct{}
 	eventsLock         *sync.Mutex
 }
 
 // NewNode creates an instance of Node
-func NewNode(name string, host string, port, gossipPort uint32, logger log.Logger, provider discovery.Provider, shutdownTimeout time.Duration) *Node {
-	// TODO: add more settings to memberlist config like cluster events listening and co
-	config := memberlist.DefaultLANConfig()
-	config.BindAddr = host
-	config.BindPort = int(gossipPort)
-	config.AdvertisePort = config.BindPort
-	config.LogOutput = newLogWriter(logger)
-	config.Name = net.JoinHostPort(config.BindAddr, strconv.Itoa(config.BindPort))
+func NewNode(config *Config) *Node {
+	mconfig := memberlist.DefaultLANConfig()
+	mconfig.BindAddr = config.host
+	mconfig.BindPort = int(config.gossipPort)
+	mconfig.AdvertisePort = mconfig.BindPort
+	mconfig.LogOutput = newLogWriter(config.logger)
+	mconfig.Name = net.JoinHostPort(mconfig.BindAddr, strconv.Itoa(mconfig.BindPort))
 
-	md := make(map[string]string)
-	md["port"] = strconv.Itoa(int(port))
-	md["name"] = name
 	meta := &internalpb.NodeMeta{
-		Metadata: md,
+		Name:         config.name,
+		Host:         config.host,
+		Port:         config.port,
+		GossipPort:   config.gossipPort,
+		CreationTime: timestamppb.New(time.Now().UTC()),
 	}
 	state := newState(meta)
-	config.Delegate = state
+	mconfig.Delegate = state
 
 	return &Node{
 		mu:                 new(sync.Mutex),
-		host:               host,
-		port:               int(port),
-		gossipPort:         int(gossipPort),
 		state:              state,
-		memberConfig:       config,
-		name:               name,
-		logger:             logger,
+		memberConfig:       mconfig,
 		started:            atomic.NewBool(false),
-		shutdownTimeout:    shutdownTimeout,
-		provider:           provider,
 		eventsChan:         make(chan *Event, 1),
 		stopEventsListener: make(chan struct{}, 1),
 		eventsLock:         new(sync.Mutex),
+		config:             config,
 	}
 }
 
@@ -126,8 +108,9 @@ func (node *Node) Start(ctx context.Context) error {
 	node.mu.Lock()
 	if err := errorschain.
 		New(errorschain.ReturnFirst()).
-		AddError(node.provider.Initialize()).
-		AddError(node.provider.Register()).
+		AddError(node.config.Validate()).
+		AddError(node.config.provider.Initialize()).
+		AddError(node.config.provider.Register()).
 		AddError(node.join()).
 		AddError(node.serve(ctx)).
 		Error(); err != nil {
@@ -141,7 +124,7 @@ func (node *Node) Start(ctx context.Context) error {
 	node.memberConfig.Events = &memberlist.ChannelEventDelegate{
 		Ch: eventsCh,
 	}
-	node.clusterClient = newClient(node.host, node.port)
+	node.clusterClient = newClient(node.config.host, int(node.config.port))
 	node.started.Store(true)
 	node.mu.Unlock()
 
@@ -163,7 +146,7 @@ func (node *Node) Stop(ctx context.Context) error {
 
 	// no matter the outcome the node is officially off
 	node.started.Store(false)
-	ctx, cancel := context.WithTimeout(ctx, node.shutdownTimeout)
+	ctx, cancel := context.WithTimeout(ctx, node.config.shutdownTimeout)
 	defer cancel()
 
 	// stop the events loop
@@ -172,9 +155,9 @@ func (node *Node) Stop(ctx context.Context) error {
 	return errorschain.
 		New(errorschain.ReturnFirst()).
 		AddError(node.clusterClient.Close()).
-		AddError(node.memberlist.Leave(node.shutdownTimeout)).
-		AddError(node.provider.Close()).
-		AddError(node.provider.Deregister()).
+		AddError(node.memberlist.Leave(node.config.shutdownTimeout)).
+		AddError(node.config.provider.Close()).
+		AddError(node.config.provider.Deregister()).
 		AddError(node.memberlist.Shutdown()).
 		AddError(node.httpServer.Shutdown(ctx)).
 		Error()
@@ -250,13 +233,13 @@ func (node *Node) Events() <-chan *Event {
 // serve start the underlying http server
 func (node *Node) serve(ctx context.Context) error {
 	// extract the actual TCP ip address
-	host, port, err := tcp.GetHostPort(fmt.Sprintf("%s:%d", node.host, node.port))
+	host, port, err := tcp.GetHostPort(fmt.Sprintf("%s:%d", node.config.host, node.config.port))
 	if err != nil {
 		return fmt.Errorf("failed to resolve TCP address: %w", err)
 	}
 
-	node.host = host
-	node.port = port
+	node.config.WithHost(host)
+	node.config.WithPort(uint32(port))
 
 	// hook the node as the KV service handler
 	// TODO: add metric options to the handler
@@ -264,7 +247,7 @@ func (node *Node) serve(ctx context.Context) error {
 
 	mux := nethttp.NewServeMux()
 	mux.Handle(pattern, handler)
-	server := http.NewServer(ctx, node.host, node.port, mux)
+	server := http.NewServer(ctx, node.config.host, int(node.config.port), mux)
 
 	node.httpServer = server
 
@@ -272,7 +255,7 @@ func (node *Node) serve(ctx context.Context) error {
 		if err := node.httpServer.ListenAndServe(); err != nil {
 			if !errors.Is(err, nethttp.ErrServerClosed) {
 				// just panic
-				node.logger.Panic(fmt.Errorf("failed to start service: %w", err))
+				node.config.logger.Panic(fmt.Errorf("failed to start service: %w", err))
 			}
 		}
 	}()
@@ -286,7 +269,8 @@ func (node *Node) join() error {
 		return err
 	}
 
-	peers, err := node.provider.DiscoverPeers()
+	// TODO: use a retry mechanism here
+	peers, err := node.config.provider.DiscoverPeers()
 	if err != nil {
 		return err
 	}
@@ -305,27 +289,27 @@ func (node *Node) join() error {
 func (node *Node) eventsListener(eventsCh chan memberlist.NodeEvent) {
 	for {
 		select {
-		case nodeEvent := <-eventsCh:
+		case event := <-eventsCh:
 			// skip this node
-			if nodeEvent.Node.Name == node.name {
+			if event.Node == nil || event.Node.Name == node.config.name {
 				continue
 			}
 
-			member := &Member{
-				Name: nodeEvent.Node.Name,
-				Addr: nodeEvent.Node.Addr,
-				Port: nodeEvent.Node.Port,
-				Meta: nodeEvent.Node.Meta,
-			}
-
 			var eventType EventType
-			switch nodeEvent.Event {
+			switch event.Event {
 			case memberlist.NodeJoin:
 				eventType = NodeJoined
 			case memberlist.NodeLeave:
 				eventType = NodeLeft
 			case memberlist.NodeUpdate:
 				// TODO: maybe handle this
+				continue
+			}
+
+			// parse the node meta information, log an eventual error during parsing and skip the event
+			member, err := MemberFromMeta(event.Node.Meta)
+			if err != nil {
+				node.config.logger.Errorf("failed to marshal node meta from cluster event: %v", event)
 				continue
 			}
 

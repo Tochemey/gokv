@@ -22,37 +22,40 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
 import (
-	"fmt"
-	"time"
+	"errors"
+	"regexp"
 )
 
-type EventType int
+// patternValidator is used to perform a validation
+// provided a given pattern
+type patternValidator struct {
+	pattern    string
+	expression string
+	customErr  error
+}
 
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
+var _ Validator = (*patternValidator)(nil)
 
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
+// NewPatternValidator creates an instance of the validator
+// The given pattern should be valid regular expression
+func NewPatternValidator(pattern, expression string, customErr error) Validator {
+	return &patternValidator{
+		pattern:    pattern,
+		expression: expression,
+		customErr:  customErr,
 	}
 }
 
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+// Validate executes the validation
+func (x *patternValidator) Validate() error {
+	if match, _ := regexp.MatchString(x.pattern, x.expression); !match {
+		if x.customErr != nil {
+			return x.customErr
+		}
+		return errors.New("invalid expression")
+	}
+	return nil
 }

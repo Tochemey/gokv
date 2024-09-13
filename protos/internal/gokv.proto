@@ -25,8 +25,16 @@ message NodeState {
 
 // NodeMeta defines the node metadata
 message NodeMeta {
-  // Specifies the node meta information
-  map<string, string> metadata = 1;
+  // Specifies the node name
+  string name = 1;
+  // Specifies the node host
+  string host = 2;
+  // Specifies the node port
+  uint32 port = 3;
+  // Specifies the node gossip port
+  uint32 gossip_port = 4;
+  // Specifies the creation time
+  google.protobuf.Timestamp creation_time = 5;
 }
 
 // KV defines the key/value pair

@@ -22,37 +22,38 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
 import (
-	"fmt"
-	"time"
+	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
-type EventType int
-
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
+type conditionalTestSuite struct {
+	suite.Suite
 }
 
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+// In order for 'go test' to run this suite, we need to create
+// a normal test function and pass our suite to suite.Run
+func TestConditionalValidator(t *testing.T) {
+	suite.Run(t, new(conditionalTestSuite))
+}
+
+func (s *conditionalTestSuite) TestConditionalValidator() {
+	s.Run("with condition set to true", func() {
+		fieldName := "field"
+		fieldValue := ""
+		validator := NewConditionalValidator(true, NewEmptyStringValidator(fieldName, fieldValue))
+		err := validator.Validate()
+		s.Assert().Error(err)
+		s.Assert().EqualError(err, "the [field] is required")
+	})
+	s.Run("with condition set to false", func() {
+		fieldName := "field"
+		fieldValue := ""
+		validator := NewConditionalValidator(false, NewEmptyStringValidator(fieldName, fieldValue))
+		err := validator.Validate()
+		s.Assert().NoError(err)
+	})
 }

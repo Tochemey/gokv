@@ -22,37 +22,33 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
 import (
-	"fmt"
-	"time"
+	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
-type EventType int
-
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
+type booleanTestSuite struct {
+	suite.Suite
 }
 
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+// In order for 'go test' to run this suite, we need to create
+// a normal test function and pass our suite to suite.Run
+func TestBooleanValidator(t *testing.T) {
+	suite.Run(t, new(booleanTestSuite))
+}
+
+func (s *booleanTestSuite) TestBooleanValidator() {
+	s.Run("happy path when condition is true", func() {
+		err := NewBooleanValidator(true, "error message").Validate()
+		s.Assert().NoError(err)
+	})
+	s.Run("happy path when condition is false", func() {
+		errMsg := "error message"
+		err := NewBooleanValidator(false, errMsg).Validate()
+		s.Assert().Error(err)
+		s.Assert().EqualError(err, errMsg)
+	})
 }

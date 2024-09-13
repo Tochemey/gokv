@@ -22,37 +22,24 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
-import (
-	"fmt"
-	"time"
-)
-
-type EventType int
-
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
+// conditionalValidator runs a validator when a condition is met
+type conditionalValidator struct {
+	c bool
+	v Validator
 }
 
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+// NewConditionalValidator creates a conditional validator, that runs the validator if the condition is true.
+// This validator will help when performing data update
+func NewConditionalValidator(condition bool, validator Validator) Validator {
+	return &conditionalValidator{c: condition, v: validator}
+}
+
+// Validate runs the provided conditional validator
+func (v conditionalValidator) Validate() error {
+	if v.c {
+		return v.v.Validate()
+	}
+	return nil
 }

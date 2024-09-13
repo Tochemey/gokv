@@ -22,37 +22,48 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
 import (
+	"errors"
 	"fmt"
-	"time"
+	"net"
+	"strconv"
+	"strings"
 )
 
-type EventType int
+var errFmt = "invalid address=(%s): %w"
 
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
+// TCPAddressValidator helps validate a TCP address
+type TCPAddressValidator struct {
+	address string
 }
 
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+// making sure the given struct implements the given interface
+var _ Validator = (*TCPAddressValidator)(nil)
+
+// NewTCPAddressValidator creates an instance of TCPAddressValidator
+func NewTCPAddressValidator(address string) *TCPAddressValidator {
+	return &TCPAddressValidator{address: address}
+}
+
+// Validate implements validation.Validator.
+func (a *TCPAddressValidator) Validate() error {
+	host, port, err := net.SplitHostPort(strings.TrimSpace(a.address))
+	if err != nil {
+		return fmt.Errorf(errFmt, a.address, err)
+	}
+
+	// let us validate the port number
+	portNum, err := strconv.Atoi(port)
+	if err != nil {
+		return fmt.Errorf(errFmt, a.address, err)
+	}
+
+	// TODO: maybe we only need to check port number not to be negative
+	if host == "" || portNum > 65535 || portNum < 0 {
+		return fmt.Errorf(errFmt, a.address, errors.New("invalid address"))
+	}
+
+	return nil
 }
