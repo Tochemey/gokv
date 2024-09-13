@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package internalpb;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/tochemey/gokv/internal/internalpb;internalpb";
+
+// KVService defines the service
+service KVService {
+  // Put is used to distribute a key/value pair across a cluster of nodes
+  rpc Put(PutRequest) returns (PutResponse);
+  // Get is used to retrieve a key/value pair in a cluster of nodes
+  rpc Get(GetRequest) returns (GetResponse);
+  // Delete is used to remove a key/value pair from a cluster of nodes
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+}
+
+// NodeState defines the node state
+// This will be distributed in the cluster
+message NodeState {
+  // Specifies the node state
+  map<string, KV> state = 1;
+}
+
+// NodeMeta defines the node metadata
+message NodeMeta {
+  // Specifies the node meta information
+  map<string, string> metadata = 1;
+}
+
+// KV defines the key/value pair
+message KV {
+  // Specifies the key
+  string key = 1;
+  // Specifies the value
+  bytes value = 2;
+  // Specifies the creation time timestamp
+  google.protobuf.Timestamp created_at = 3;
+}
+
+// GetRequest is used to fetch the value of a given key
+message GetRequest {
+  // Specifies the key
+  string key = 1;
+}
+
+// GetResponse is the response to GetRequest
+message GetResponse {
+  // Specifies the KV
+  KV kv = 1;
+}
+
+// PutRequest is used to distribute a given key/value
+message PutRequest {
+  // Specifies the key
+  string key = 1;
+  // Specifies the value
+  bytes value = 2;
+}
+
+// PutResponse is the response to PutRequest
+message PutResponse {}
+
+// DeleteRequest is used to remove a distributed key from the cluster
+message DeleteRequest {
+  // Specifies the key
+  string key = 1;
+}
+
+// DeleteResponse is the response to DeleteRequest
+message DeleteResponse {}

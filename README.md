@@ -1,2 +1,3 @@
-# gokv
-[Go] Distributed in-memory key/value store
+# Go-KV
+
+Simple Distributed in-memory key/value store.
