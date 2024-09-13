@@ -17,7 +17,9 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
 package cluster
@@ -37,6 +39,7 @@ import (
 	"go.uber.org/atomic"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/tochemey/gokv/discovery"
 	"github.com/tochemey/gokv/internal/errorschain"
 	"github.com/tochemey/gokv/internal/http"
 	"github.com/tochemey/gokv/internal/internalpb"
@@ -48,9 +51,6 @@ import (
 // Node defines the cluster node
 type Node struct {
 	internalpbconnect.UnimplementedKVServiceHandler
-
-	//  addr:port of node in the cluster to join to; empty if it's the first node
-	peers []string
 
 	// host defines the host address
 	host string
@@ -77,17 +77,15 @@ type Node struct {
 	httpServer *nethttp.Server
 	mu         *sync.Mutex
 
-	clusterClient *Client
+	clusterClient      *Client
+	provider           discovery.Provider
+	eventsChan         chan *Event
+	stopEventsListener chan struct{}
+	eventsLock         *sync.Mutex
 }
 
 // NewNode creates an instance of Node
-func NewNode(name string,
-	host string,
-	port,
-	gossipPort uint32,
-	peers []string,
-	logger log.Logger,
-	shutdownTimeout time.Duration) *Node {
+func NewNode(name string, host string, port, gossipPort uint32, logger log.Logger, provider discovery.Provider, shutdownTimeout time.Duration) *Node {
 	// TODO: add more settings to memberlist config like cluster events listening and co
 	config := memberlist.DefaultLANConfig()
 	config.BindAddr = host
@@ -106,17 +104,20 @@ func NewNode(name string,
 	config.Delegate = state
 
 	return &Node{
-		mu:              new(sync.Mutex),
-		peers:           peers,
-		host:            host,
-		port:            int(port),
-		gossipPort:      int(gossipPort),
-		state:           state,
-		memberConfig:    config,
-		name:            name,
-		logger:          logger,
-		started:         atomic.NewBool(false),
-		shutdownTimeout: shutdownTimeout,
+		mu:                 new(sync.Mutex),
+		host:               host,
+		port:               int(port),
+		gossipPort:         int(gossipPort),
+		state:              state,
+		memberConfig:       config,
+		name:               name,
+		logger:             logger,
+		started:            atomic.NewBool(false),
+		shutdownTimeout:    shutdownTimeout,
+		provider:           provider,
+		eventsChan:         make(chan *Event, 1),
+		stopEventsListener: make(chan struct{}, 1),
+		eventsLock:         new(sync.Mutex),
 	}
 }
 
@@ -125,6 +126,8 @@ func (node *Node) Start(ctx context.Context) error {
 	node.mu.Lock()
 	if err := errorschain.
 		New(errorschain.ReturnFirst()).
+		AddError(node.provider.Initialize()).
+		AddError(node.provider.Register()).
 		AddError(node.join()).
 		AddError(node.serve(ctx)).
 		Error(); err != nil {
@@ -132,9 +135,19 @@ func (node *Node) Start(ctx context.Context) error {
 		return err
 	}
 
+	// create enough buffer to house the cluster events
+	// TODO: revisit this number
+	eventsCh := make(chan memberlist.NodeEvent, 256)
+	node.memberConfig.Events = &memberlist.ChannelEventDelegate{
+		Ch: eventsCh,
+	}
 	node.clusterClient = newClient(node.host, node.port)
 	node.started.Store(true)
 	node.mu.Unlock()
+
+	// start listening to events
+	go node.eventsListener(eventsCh)
+
 	return nil
 }
 
@@ -153,10 +166,15 @@ func (node *Node) Stop(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, node.shutdownTimeout)
 	defer cancel()
 
+	// stop the events loop
+	close(node.stopEventsListener)
+
 	return errorschain.
 		New(errorschain.ReturnFirst()).
 		AddError(node.clusterClient.Close()).
 		AddError(node.memberlist.Leave(node.shutdownTimeout)).
+		AddError(node.provider.Close()).
+		AddError(node.provider.Deregister()).
 		AddError(node.memberlist.Shutdown()).
 		AddError(node.httpServer.Shutdown(ctx)).
 		Error()
@@ -221,6 +239,14 @@ func (node *Node) Client() *Client {
 	return client
 }
 
+// Events returns a channel where cluster events are published
+func (node *Node) Events() <-chan *Event {
+	node.eventsLock.Lock()
+	ch := node.eventsChan
+	node.eventsLock.Unlock()
+	return ch
+}
+
 // serve start the underlying http server
 func (node *Node) serve(ctx context.Context) error {
 	// extract the actual TCP ip address
@@ -260,12 +286,61 @@ func (node *Node) join() error {
 		return err
 	}
 
+	peers, err := node.provider.DiscoverPeers()
+	if err != nil {
+		return err
+	}
+
 	// set the mlist
 	node.memberlist = mlist
-	if len(node.peers) > 0 {
-		if _, err := node.memberlist.Join(node.peers); err != nil {
+	if len(peers) > 0 {
+		if _, err := node.memberlist.Join(peers); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// eventsListener listens to cluster events to handle them
+func (node *Node) eventsListener(eventsCh chan memberlist.NodeEvent) {
+	for {
+		select {
+		case nodeEvent := <-eventsCh:
+			// skip this node
+			if nodeEvent.Node.Name == node.name {
+				continue
+			}
+
+			member := &Member{
+				Name: nodeEvent.Node.Name,
+				Addr: nodeEvent.Node.Addr,
+				Port: nodeEvent.Node.Port,
+				Meta: nodeEvent.Node.Meta,
+			}
+
+			var eventType EventType
+			switch nodeEvent.Event {
+			case memberlist.NodeJoin:
+				eventType = NodeJoined
+			case memberlist.NodeLeave:
+				eventType = NodeLeft
+			case memberlist.NodeUpdate:
+				// TODO: maybe handle this
+				continue
+			}
+
+			// send the event to the event channels
+			node.eventsLock.Lock()
+			node.eventsChan <- &Event{
+				Member: member,
+				Time:   time.Now().UTC(),
+				Type:   eventType,
+			}
+			node.eventsLock.Unlock()
+		case <-node.stopEventsListener:
+			// finish listening to cluster events
+			close(node.eventsChan)
+			return
+		}
+	}
 }

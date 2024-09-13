@@ -17,13 +17,51 @@
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
-package discovery
+package cluster
 
-// Node defines the cluster node
-type Node struct {
-	// Address specifies the node address of the form "host:port"
-	Address string
+import (
+	"fmt"
+	"net"
+	"time"
+)
+
+type EventType int
+
+const (
+	NodeJoined EventType = iota
+	NodeLeft
+	NodeDead
+)
+
+func (et EventType) String() string {
+	switch et {
+	case NodeJoined:
+		return "NodeJoined"
+	case NodeLeft:
+		return "NodeLeft"
+	case NodeDead:
+		return "NodeDead"
+	default:
+		return fmt.Sprintf("%d", int(et))
+	}
+}
+
+// Member specifies the cluster member
+type Member struct {
+	Name string
+	Addr net.IP
+	Port uint16
+	Meta []byte // Metadata from the delegate for this node.
+}
+
+// Event defines the cluster event
+type Event struct {
+	Member *Member
+	Time   time.Time
+	Type   EventType
 }
