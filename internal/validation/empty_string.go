@@ -22,37 +22,24 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
-import (
-	"fmt"
-	"time"
-)
+import "fmt"
 
-type EventType int
-
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
+type emptyStringValidator struct {
+	fieldValue string
+	fieldName  string
 }
 
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+// NewEmptyStringValidator creates a string a emptyString validator
+func NewEmptyStringValidator(fieldName, fieldValue string) Validator {
+	return emptyStringValidator{fieldValue: fieldValue, fieldName: fieldName}
+}
+
+// Validate checks whether the given string is empty or not
+func (v emptyStringValidator) Validate() error {
+	if v.fieldValue == "" {
+		return fmt.Errorf("the [%s] is required", v.fieldName)
+	}
+	return nil
 }

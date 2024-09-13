@@ -22,37 +22,36 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
 import (
-	"fmt"
-	"time"
+	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
-type EventType int
-
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
+type emptyStringTestSuite struct {
+	suite.Suite
 }
 
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+// In order for 'go test' to run this suite, we need to create
+// a normal test function and pass our suite to suite.Run
+func TestEmptyStringValidator(t *testing.T) {
+	suite.Run(t, new(emptyStringTestSuite))
+}
+
+func (s *emptyStringTestSuite) TestEmptyStringValidator() {
+	s.Run("with string value set", func() {
+		validator := NewEmptyStringValidator("field", "some-value")
+		s.Assert().NotNil(validator)
+		err := validator.Validate()
+		s.Assert().NoError(err)
+	})
+	s.Run("with string value not set", func() {
+		validator := NewEmptyStringValidator("field", "")
+		s.Assert().NotNil(validator)
+		err := validator.Validate()
+		s.Assert().Error(err)
+		s.Assert().EqualError(err, "the [field] is required")
+	})
 }

@@ -25,34 +25,29 @@
 package cluster
 
 import (
-	"fmt"
-	"time"
+	"github.com/tochemey/gokv/internal/internalpb"
+	"google.golang.org/protobuf/proto"
 )
 
-type EventType int
-
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
+// Member specifies the cluster member
+type Member struct {
+	Name       string
+	Host       string
+	Port       uint32
+	GossipPort uint32
 }
 
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+// MemberFromMeta returns a Member record from
+// a node metadata
+func MemberFromMeta(meta []byte) (*Member, error) {
+	nodeMeta := new(internalpb.NodeMeta)
+	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
+		return nil, err
+	}
+	return &Member{
+		Name:       nodeMeta.GetName(),
+		Host:       nodeMeta.GetHost(),
+		Port:       nodeMeta.GetPort(),
+		GossipPort: nodeMeta.GetGossipPort(),
+	}, nil
 }

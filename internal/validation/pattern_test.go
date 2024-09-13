@@ -22,37 +22,26 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
 import (
-	"fmt"
-	"time"
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type EventType int
+func TestPatternValidator(t *testing.T) {
+	pattern := "^[a-zA-Z0-9][a-zA-Z0-9-_\\.]*$"
+	expression := "discarder"
+	validator := NewPatternValidator(pattern, expression, nil)
+	assert.NoError(t, validator.Validate())
 
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
-}
-
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+	expression = "$omeN@me"
+	customError := errors.New("custom error")
+	validator = NewPatternValidator(pattern, expression, customError)
+	err := validator.Validate()
+	require.Error(t, err)
+	assert.EqualError(t, err, customError.Error())
 }

@@ -22,37 +22,33 @@
  * SOFTWARE.
  */
 
-package cluster
+package validation
 
 import (
-	"fmt"
-	"time"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-type EventType int
-
-const (
-	NodeJoined EventType = iota
-	NodeLeft
-	NodeDead
-)
-
-func (et EventType) String() string {
-	switch et {
-	case NodeJoined:
-		return "NodeJoined"
-	case NodeLeft:
-		return "NodeLeft"
-	case NodeDead:
-		return "NodeDead"
-	default:
-		return fmt.Sprintf("%d", int(et))
-	}
-}
-
-// Event defines the cluster event
-type Event struct {
-	Member *Member
-	Time   time.Time
-	Type   EventType
+func TestTCPAddressValidator(t *testing.T) {
+	t.Run("With happy path", func(t *testing.T) {
+		addr := "127.0.0.1:3222"
+		assert.NoError(t, NewTCPAddressValidator(addr).Validate())
+	})
+	t.Run("With invalid port number: case 1", func(t *testing.T) {
+		addr := "127.0.0.1:-1"
+		assert.Error(t, NewTCPAddressValidator(addr).Validate())
+	})
+	t.Run("With invalid port number: case 2", func(t *testing.T) {
+		addr := "127.0.0.1:655387"
+		assert.Error(t, NewTCPAddressValidator(addr).Validate())
+	})
+	t.Run("With  zero port number: case 3", func(t *testing.T) {
+		addr := "127.0.0.1:0"
+		assert.NoError(t, NewTCPAddressValidator(addr).Validate())
+	})
+	t.Run("With invalid host", func(t *testing.T) {
+		addr := ":3222"
+		assert.Error(t, NewTCPAddressValidator(addr).Validate())
+	})
 }
