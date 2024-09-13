@@ -1,3 +1,3 @@
 # Go-KV
 
-Simple Distributed in-memory key/value store.
+Simple Distributed in-memory key/value store. 
