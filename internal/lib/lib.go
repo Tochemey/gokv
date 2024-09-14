@@ -25,6 +25,8 @@
 package lib
 
 import (
+	"net"
+	"strconv"
 	"time"
 
 	"github.com/tochemey/gokv/internal/types"
@@ -38,4 +40,9 @@ func Pause(duration time.Duration) {
 	})
 	<-stopCh
 	timer.Stop()
+}
+
+// HostPort returns the combination of host:port
+func HostPort(host string, port int) string {
+	return net.JoinHostPort(host, strconv.Itoa(port))
 }

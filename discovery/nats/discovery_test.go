@@ -73,15 +73,13 @@ func newPeer(t *testing.T, serverAddr string) *Discovery {
 	host := "127.0.0.1"
 	// create the various config option
 	natsSubject := "some-subject"
-	nodeName := net.JoinHostPort(host, strconv.Itoa(gossipPort))
 
 	// create the config
 	config := &Config{
-		Server:     fmt.Sprintf("nats://%s", serverAddr),
-		Subject:    natsSubject,
-		NodeName:   nodeName,
-		NodeHost:   host,
-		GossipPort: gossipPort,
+		Server:        fmt.Sprintf("nats://%s", serverAddr),
+		Subject:       natsSubject,
+		Host:          host,
+		DiscoveryPort: uint16(gossipPort),
 	}
 
 	// create the instance of provider
@@ -107,16 +105,14 @@ func TestDiscovery(t *testing.T) {
 		host := "127.0.0.1"
 		// create the various config option
 		natsSubject := "some-subject"
-		nodeName := net.JoinHostPort(host, strconv.Itoa(gossipPort))
 
 		serverAddr := srv.Addr().String()
 		// create the config
 		config := &Config{
-			Server:     fmt.Sprintf("nats://%s", serverAddr),
-			Subject:    natsSubject,
-			NodeName:   nodeName,
-			NodeHost:   host,
-			GossipPort: gossipPort,
+			Server:        fmt.Sprintf("nats://%s", serverAddr),
+			Subject:       natsSubject,
+			Host:          host,
+			DiscoveryPort: uint16(gossipPort),
 		}
 
 		// create the instance of provider
@@ -141,15 +137,13 @@ func TestDiscovery(t *testing.T) {
 		host := "127.0.0.1"
 		// create the various config option
 		natsSubject := "some-subject"
-		nodeName := net.JoinHostPort(host, strconv.Itoa(gossipPort))
 
 		// create the config
 		config := &Config{
-			Server:     fmt.Sprintf("nats://%s", srv.Addr().String()),
-			Subject:    natsSubject,
-			NodeName:   nodeName,
-			NodeHost:   host,
-			GossipPort: gossipPort,
+			Server:        fmt.Sprintf("nats://%s", srv.Addr().String()),
+			Subject:       natsSubject,
+			Host:          host,
+			DiscoveryPort: uint16(gossipPort),
 		}
 
 		// create the instance of provider
@@ -170,15 +164,13 @@ func TestDiscovery(t *testing.T) {
 
 		// create the various config option
 		natsSubject := "some-subject"
-		nodeName := net.JoinHostPort(host, strconv.Itoa(gossipPort))
 
 		// create the config
 		config := &Config{
-			Server:     fmt.Sprintf("nats://%s", srv.Addr().String()),
-			Subject:    natsSubject,
-			NodeName:   nodeName,
-			NodeHost:   host,
-			GossipPort: gossipPort,
+			Server:        fmt.Sprintf("nats://%s", srv.Addr().String()),
+			Subject:       natsSubject,
+			Host:          host,
+			DiscoveryPort: uint16(gossipPort),
 		}
 
 		// create the instance of provider
@@ -204,15 +196,13 @@ func TestDiscovery(t *testing.T) {
 
 		// create the various config option
 		natsSubject := "some-subject"
-		nodeName := net.JoinHostPort(host, strconv.Itoa(gossipPort))
 
 		// create the config
 		config := &Config{
-			Server:     fmt.Sprintf("nats://%s", srv.Addr().String()),
-			Subject:    natsSubject,
-			NodeName:   nodeName,
-			NodeHost:   host,
-			GossipPort: gossipPort,
+			Server:        fmt.Sprintf("nats://%s", srv.Addr().String()),
+			Subject:       natsSubject,
+			Host:          host,
+			DiscoveryPort: uint16(gossipPort),
 		}
 
 		// create the instance of provider
@@ -234,15 +224,13 @@ func TestDiscovery(t *testing.T) {
 		// create the various config option
 		natsServer := srv.Addr().String()
 		natsSubject := "some-subject"
-		nodeName := net.JoinHostPort(host, strconv.Itoa(gossipPort))
 
 		// create the config
 		config := &Config{
-			Server:     fmt.Sprintf("nats://%s", natsServer),
-			Subject:    natsSubject,
-			NodeName:   nodeName,
-			NodeHost:   host,
-			GossipPort: gossipPort,
+			Server:        fmt.Sprintf("nats://%s", natsServer),
+			Subject:       natsSubject,
+			Host:          host,
+			DiscoveryPort: uint16(gossipPort),
 		}
 
 		// create the instance of provider
@@ -265,15 +253,13 @@ func TestDiscovery(t *testing.T) {
 
 		natsServer := srv.Addr().String()
 		natsSubject := "some-subject"
-		nodeName := net.JoinHostPort(host, strconv.Itoa(gossipPort))
 
 		// create the config
 		config := &Config{
-			Server:     fmt.Sprintf("nats://%s", natsServer),
-			Subject:    natsSubject,
-			NodeName:   nodeName,
-			NodeHost:   host,
-			GossipPort: gossipPort,
+			Server:        fmt.Sprintf("nats://%s", natsServer),
+			Subject:       natsSubject,
+			Host:          host,
+			DiscoveryPort: uint16(gossipPort),
 		}
 
 		// create the instance of provider
@@ -313,7 +299,7 @@ func TestDiscovery(t *testing.T) {
 		require.NotEmpty(t, peers)
 		require.Len(t, peers, 1)
 
-		discoveredNodeAddr := net.JoinHostPort(client2.config.NodeHost, strconv.Itoa(client2.config.GossipPort))
+		discoveredNodeAddr := net.JoinHostPort(client2.config.Host, strconv.Itoa(int(client2.config.DiscoveryPort)))
 		require.Equal(t, peers[0], discoveredNodeAddr)
 
 		// discover more peers from client 2
@@ -322,7 +308,7 @@ func TestDiscovery(t *testing.T) {
 		require.NotEmpty(t, peers)
 		require.Len(t, peers, 1)
 
-		discoveredNodeAddr = net.JoinHostPort(client1.config.NodeHost, strconv.Itoa(client1.config.GossipPort))
+		discoveredNodeAddr = net.JoinHostPort(client1.config.Host, strconv.Itoa(int(client1.config.DiscoveryPort)))
 		require.Equal(t, peers[0], discoveredNodeAddr)
 
 		// de-register client 2 but it can see client1
@@ -330,7 +316,7 @@ func TestDiscovery(t *testing.T) {
 		peers, err = client2.DiscoverPeers()
 		require.NoError(t, err)
 		require.NotEmpty(t, peers)
-		discoveredNodeAddr = net.JoinHostPort(client1.config.NodeHost, strconv.Itoa(client1.config.GossipPort))
+		discoveredNodeAddr = net.JoinHostPort(client1.config.Host, strconv.Itoa(int(client1.config.DiscoveryPort)))
 		require.Equal(t, peers[0], discoveredNodeAddr)
 
 		// client-1 cannot see the deregistered client
@@ -358,15 +344,13 @@ func TestDiscovery(t *testing.T) {
 		// create the various config option
 		natsServer := srv.Addr().String()
 		natsSubject := "some-subject"
-		nodeName := net.JoinHostPort(host, strconv.Itoa(gossipPort))
 
 		// create the config
 		config := &Config{
-			Server:     fmt.Sprintf("nats://%s", natsServer),
-			Subject:    natsSubject,
-			NodeName:   nodeName,
-			NodeHost:   host,
-			GossipPort: gossipPort,
+			Server:        fmt.Sprintf("nats://%s", natsServer),
+			Subject:       natsSubject,
+			Host:          host,
+			DiscoveryPort: uint16(gossipPort),
 		}
 
 		provider := NewDiscovery(config, WithLogger(log.DiscardLogger))

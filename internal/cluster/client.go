@@ -40,7 +40,7 @@ import (
 type Client struct {
 	// http client
 	httpClient *nethttp.Client
-	// host defines the host address
+	// host defines the host discoveryAddress
 	host string
 	// port defines the gRCP port for client connections
 	port      int

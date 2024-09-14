@@ -40,6 +40,7 @@ import (
 
 	"github.com/tochemey/gokv/discovery"
 	"github.com/tochemey/gokv/internal/internalpb"
+	"github.com/tochemey/gokv/internal/lib"
 	"github.com/tochemey/gokv/log"
 )
 
@@ -81,7 +82,7 @@ func NewDiscovery(config *Config, opts ...Option) *Discovery {
 		opt.Apply(discovery)
 	}
 
-	discovery.address = net.JoinHostPort(config.NodeHost, strconv.Itoa(int(config.GossipPort)))
+	discovery.address = net.JoinHostPort(config.Host, strconv.Itoa(int(config.DiscoveryPort)))
 	return discovery
 }
 
@@ -103,6 +104,8 @@ func (d *Discovery) Initialize() error {
 		return err
 	}
 
+	d.logger.Infof("initialisation of %s discovery provider", d.ID())
+
 	if d.config.Timeout <= 0 {
 		d.config.Timeout = time.Second
 	}
@@ -118,7 +121,7 @@ func (d *Discovery) Initialize() error {
 	// create the nats connection option
 	opts := nats.GetDefaultOptions()
 	opts.Url = d.config.Server
-	opts.Name = d.config.NodeName
+	opts.Name = lib.HostPort(d.config.Host, int(d.config.DiscoveryPort))
 	opts.ReconnectWait = d.config.ReconnectWait
 	opts.MaxReconnect = -1
 
@@ -143,6 +146,8 @@ func (d *Discovery) Initialize() error {
 	// create the NATs connection
 	d.connection = connection
 	d.initialized = atomic.NewBool(true)
+
+	d.logger.Infof("%s discovery provider successfully initialised", d.ID())
 	return nil
 }
 
@@ -154,6 +159,8 @@ func (d *Discovery) Register() error {
 	if d.registered.Load() {
 		return discovery.ErrAlreadyRegistered
 	}
+
+	d.logger.Infof("registration of %s discovery provider", d.ID())
 
 	// create the subscription handler
 	handler := func(msg *nats.Msg) {
@@ -176,9 +183,9 @@ func (d *Discovery) Register() error {
 				d.address, message.GetName(), message.GetHost(), message.GetPort())
 
 			response := &internalpb.NatsMessage{
-				Host:        d.config.NodeHost,
-				Port:        int32(d.config.GossipPort),
-				Name:        d.config.NodeName,
+				Host:        d.config.Host,
+				Port:        int32(d.config.DiscoveryPort),
+				Name:        lib.HostPort(d.config.Host, int(d.config.DiscoveryPort)),
 				MessageType: internalpb.NatsMessageType_NATS_MESSAGE_TYPE_RESPONSE,
 			}
 
@@ -197,6 +204,8 @@ func (d *Discovery) Register() error {
 
 	d.subscriptions = append(d.subscriptions, subscription)
 	d.registered = atomic.NewBool(true)
+
+	d.logger.Infof("%s discovery provider successfully registered", d.ID())
 	return nil
 }
 
@@ -210,6 +219,7 @@ func (d *Discovery) Deregister() error {
 		return discovery.ErrNotRegistered
 	}
 
+	d.logger.Infof("de-registration of %s discovery provider", d.ID())
 	// shutdown all the subscriptions
 	for _, subscription := range d.subscriptions {
 		// when subscription is defined
@@ -228,9 +238,9 @@ func (d *Discovery) Deregister() error {
 	if d.connection != nil {
 		// send a message to deregister stating we are out
 		message := &internalpb.NatsMessage{
-			Host:        d.config.NodeHost,
-			Port:        int32(d.config.GossipPort),
-			Name:        d.config.NodeName,
+			Host:        d.config.Host,
+			Port:        int32(d.config.DiscoveryPort),
+			Name:        lib.HostPort(d.config.Host, int(d.config.DiscoveryPort)),
 			MessageType: internalpb.NatsMessageType_NATS_MESSAGE_TYPE_DEREGISTER,
 		}
 
@@ -238,6 +248,8 @@ func (d *Discovery) Deregister() error {
 		return d.connection.Publish(d.config.Subject, bytea)
 	}
 	d.registered.Store(false)
+
+	d.logger.Infof("%s discovery provider successfully de-registered", d.ID())
 	return nil
 }
 
@@ -267,9 +279,9 @@ func (d *Discovery) DiscoverPeers() ([]string, error) {
 	}
 
 	request := &internalpb.NatsMessage{
-		Host:        d.config.NodeHost,
-		Port:        int32(d.config.GossipPort),
-		Name:        d.config.NodeName,
+		Host:        d.config.Host,
+		Port:        int32(d.config.DiscoveryPort),
+		Name:        lib.HostPort(d.config.Host, int(d.config.DiscoveryPort)),
 		MessageType: internalpb.NatsMessageType_NATS_MESSAGE_TYPE_REQUEST,
 	}
 
@@ -280,7 +292,7 @@ func (d *Discovery) DiscoverPeers() ([]string, error) {
 
 	var peers []string
 	timeout := time.After(d.config.Timeout)
-	me := net.JoinHostPort(d.config.NodeHost, strconv.Itoa(d.config.GossipPort))
+	me := net.JoinHostPort(d.config.Host, strconv.Itoa(int(d.config.DiscoveryPort)))
 	for {
 		select {
 		case msg, ok := <-msgCh:

@@ -47,15 +47,15 @@ func TestNodes(t *testing.T) {
 	srv := startNatsServer(t)
 
 	// create a cluster node1
-	node1, sd1 := startNode(t, "node1", srv.Addr().String())
+	node1, sd1 := startNode(t, srv.Addr().String())
 	require.NotNil(t, node1)
 
 	// create a cluster node2
-	node2, sd2 := startNode(t, "node2", srv.Addr().String())
+	node2, sd2 := startNode(t, srv.Addr().String())
 	require.NotNil(t, node2)
 
 	// create a cluster node2
-	node3, sd3 := startNode(t, "node3", srv.Addr().String())
+	node3, sd3 := startNode(t, srv.Addr().String())
 	require.NotNil(t, node3)
 
 	// let us distribute a key in the cluster
@@ -107,6 +107,88 @@ func TestNodes(t *testing.T) {
 	})
 }
 
+func TestClusterEvents(t *testing.T) {
+	ctx := context.Background()
+
+	// start the NATS server
+	srv := startNatsServer(t)
+
+	// create a cluster node1
+	node1, sd1 := startNode(t, srv.Addr().String())
+	require.NotNil(t, node1)
+
+	// create a cluster node2
+	node2, sd2 := startNode(t, srv.Addr().String())
+	require.NotNil(t, node2)
+
+	// assert the node joined cluster event
+	var events []*Event
+
+	// define an events reader loop and read events for some time
+L:
+	for {
+		select {
+		case event, ok := <-node1.Events():
+			if ok {
+				events = append(events, event)
+			}
+		case <-time.After(time.Second):
+			break L
+		}
+	}
+
+	require.NotEmpty(t, events)
+	require.Len(t, events, 1)
+	event := events[0]
+	require.NotNil(t, event)
+	require.True(t, event.Type == NodeJoined)
+	actualAddr := event.Member.DiscoveryAddress()
+	require.Equal(t, node2.DiscoveryAddress(), actualAddr)
+	peers, err := node1.Peers()
+	require.NoError(t, err)
+	require.Len(t, peers, 1)
+	require.Equal(t, node2.DiscoveryAddress(), peers[0].DiscoveryAddress())
+
+	// wait for some time
+	lib.Pause(time.Second)
+
+	// stop the second node
+	require.NoError(t, node2.Stop(ctx))
+	// wait for the event to propagate properly
+	lib.Pause(time.Second)
+
+	// reset the slice
+	events = []*Event{}
+
+	// define an events reader loop and read events for some time
+L2:
+	for {
+		select {
+		case event, ok := <-node1.Events():
+			if ok {
+				events = append(events, event)
+			}
+		case <-time.After(time.Second):
+			break L2
+		}
+	}
+
+	require.NotEmpty(t, events)
+	require.Len(t, events, 1)
+	event = events[0]
+	require.NotNil(t, event)
+	require.True(t, event.Type == NodeLeft)
+	actualAddr = event.Member.DiscoveryAddress()
+	require.Equal(t, node2.DiscoveryAddress(), actualAddr)
+
+	t.Cleanup(func() {
+		assert.NoError(t, node1.Stop(ctx))
+		assert.NoError(t, sd1.Close())
+		assert.NoError(t, sd2.Close())
+		srv.Shutdown()
+	})
+}
+
 func startNatsServer(t *testing.T) *natsserver.Server {
 	t.Helper()
 	serv, err := natsserver.NewServer(&natsserver.Options{
@@ -130,9 +212,9 @@ func startNatsServer(t *testing.T) *natsserver.Server {
 	return serv
 }
 
-func startNode(t *testing.T, nodeName, serverAddr string) (*Node, discovery.Provider) {
+func startNode(t *testing.T, serverAddr string) (*Node, discovery.Provider) {
 	ctx := context.TODO()
-	logger := log.DefaultLogger
+	logger := log.DiscardLogger
 
 	// generate the ports for the single startNode
 	nodePorts := dynaport.Get(2)
@@ -145,11 +227,10 @@ func startNode(t *testing.T, nodeName, serverAddr string) (*Node, discovery.Prov
 	natsSubject := "some-subject"
 	// create the config
 	config := nats.Config{
-		Server:     fmt.Sprintf("nats://%s", serverAddr),
-		Subject:    natsSubject,
-		NodeName:   nodeName,
-		NodeHost:   host,
-		GossipPort: gossipPort,
+		Server:        fmt.Sprintf("nats://%s", serverAddr),
+		Subject:       natsSubject,
+		Host:          host,
+		DiscoveryPort: uint16(gossipPort),
 	}
 
 	// create the instance of provider
@@ -157,9 +238,8 @@ func startNode(t *testing.T, nodeName, serverAddr string) (*Node, discovery.Prov
 
 	node := NewNode(&Config{
 		provider:          provider,
-		name:              nodeName,
-		port:              uint32(clientPort),
-		gossipPort:        uint32(gossipPort),
+		port:              uint16(clientPort),
+		discoveryPort:     uint16(gossipPort),
 		shutdownTimeout:   time.Second,
 		logger:            logger,
 		host:              host,

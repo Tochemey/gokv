@@ -47,12 +47,10 @@ type Config struct {
 	// to a server that we were already connected to previously.
 	// Defaults to 2s.
 	ReconnectWait time.Duration
-	// NodeName specifies the node name
-	NodeName string
-	// NodeHost specifies the host
-	NodeHost string
-	// GossipPort specifies the node gossip port
-	GossipPort int
+	// Host specifies the host
+	Host string
+	// DiscoveryPort specifies the node discovery port
+	DiscoveryPort uint16
 }
 
 // Validate checks whether the given discovery configuration is valid
@@ -61,9 +59,8 @@ func (config Config) Validate() error {
 		AddValidator(validation.NewEmptyStringValidator("Server", config.Server)).
 		AddValidator(NewServerAddrValidator(config.Server)).
 		AddValidator(validation.NewEmptyStringValidator("Subject", config.Subject)).
-		AddValidator(validation.NewEmptyStringValidator("NodeName", config.NodeName)).
-		AddValidator(validation.NewEmptyStringValidator("NodeHost", config.NodeHost)).
-		AddAssertion(config.GossipPort > 0, "GossipPort is invalid").
+		AddValidator(validation.NewEmptyStringValidator("Host", config.Host)).
+		AddAssertion(config.DiscoveryPort > 0, "DiscoveryPort is invalid").
 		Validate()
 }
 

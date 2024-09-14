@@ -45,6 +45,7 @@ import (
 	"github.com/tochemey/gokv/internal/http"
 	"github.com/tochemey/gokv/internal/internalpb"
 	"github.com/tochemey/gokv/internal/internalpb/internalpbconnect"
+	"github.com/tochemey/gokv/internal/lib"
 	"github.com/tochemey/gokv/internal/tcp"
 )
 
@@ -72,30 +73,29 @@ type Node struct {
 	stopEventsListener chan struct{}
 	eventsLock         *sync.Mutex
 
-	address string
+	discoveryAddress string
 }
 
 // NewNode creates an instance of Node
 func NewNode(config *Config) *Node {
 	mconfig := memberlist.DefaultLANConfig()
 	mconfig.BindAddr = config.host
-	mconfig.BindPort = int(config.gossipPort)
+	mconfig.BindPort = int(config.discoveryPort)
 	mconfig.AdvertisePort = mconfig.BindPort
 	mconfig.LogOutput = newLogWriter(config.logger)
 	mconfig.Name = net.JoinHostPort(mconfig.BindAddr, strconv.Itoa(mconfig.BindPort))
 	mconfig.PushPullInterval = config.stateSyncInterval
 
 	meta := &internalpb.NodeMeta{
-		Name:         config.name,
-		Host:         config.host,
-		Port:         config.port,
-		GossipPort:   config.gossipPort,
-		CreationTime: timestamppb.New(time.Now().UTC()),
+		Name:          mconfig.Name,
+		Host:          config.host,
+		Port:          uint32(config.port),
+		DiscoveryPort: uint32(config.discoveryPort),
+		CreationTime:  timestamppb.New(time.Now().UTC()),
 	}
 	state := newState(meta)
 	mconfig.Delegate = state
 
-	hostAddress := net.JoinHostPort(config.host, strconv.Itoa(int(config.gossipPort)))
 	return &Node{
 		mu:                 new(sync.Mutex),
 		state:              state,
@@ -105,7 +105,7 @@ func NewNode(config *Config) *Node {
 		stopEventsListener: make(chan struct{}, 1),
 		eventsLock:         new(sync.Mutex),
 		config:             config,
-		address:            hostAddress,
+		discoveryAddress:   lib.HostPort(config.host, int(config.discoveryPort)),
 	}
 }
 
@@ -137,7 +137,7 @@ func (node *Node) Start(ctx context.Context) error {
 	// start listening to events
 	go node.eventsListener(eventsCh)
 
-	node.config.logger.Infof("%s successfully started", node.address)
+	node.config.logger.Infof("%s successfully started", node.discoveryAddress)
 	return nil
 }
 
@@ -168,10 +168,10 @@ func (node *Node) Stop(ctx context.Context) error {
 		AddError(node.memberlist.Shutdown()).
 		AddError(node.httpServer.Shutdown(ctx)).
 		Error(); err != nil {
-		node.config.logger.Error(fmt.Errorf("%s failed to stop: %w", node.address, err))
+		node.config.logger.Error(fmt.Errorf("%s failed to stop: %w", node.discoveryAddress, err))
 		return err
 	}
-	node.config.logger.Infof("%s successfully stopped", node.address)
+	node.config.logger.Infof("%s successfully stopped", node.discoveryAddress)
 	return nil
 }
 
@@ -260,16 +260,42 @@ func (node *Node) Events() <-chan *Event {
 	return ch
 }
 
+// DiscoveryAddress returns the node discoveryAddress
+func (node *Node) DiscoveryAddress() string {
+	node.mu.Lock()
+	address := node.discoveryAddress
+	node.mu.Unlock()
+	return address
+}
+
+// Peers returns the list of peers
+func (node *Node) Peers() ([]*Member, error) {
+	node.mu.Lock()
+	mnodes := node.memberlist.Members()
+	node.mu.Unlock()
+	members := make([]*Member, 0, len(mnodes))
+	for _, mnode := range mnodes {
+		member, err := MemberFromMeta(mnode.Meta)
+		if err != nil {
+			return nil, err
+		}
+		if member != nil && member.DiscoveryAddress() != node.DiscoveryAddress() {
+			members = append(members, member)
+		}
+	}
+	return members, nil
+}
+
 // serve start the underlying http server
 func (node *Node) serve(ctx context.Context) error {
-	// extract the actual TCP ip address
+	// extract the actual TCP ip discoveryAddress
 	host, port, err := tcp.GetHostPort(fmt.Sprintf("%s:%d", node.config.host, node.config.port))
 	if err != nil {
-		return fmt.Errorf("failed to resolve TCP address: %w", err)
+		return fmt.Errorf("failed to resolve TCP discoveryAddress: %w", err)
 	}
 
 	node.config.WithHost(host)
-	node.config.WithPort(uint32(port))
+	node.config.WithPort(uint16(port))
 
 	// hook the node as the KV service handler
 	// TODO: add metric options to the handler
@@ -314,7 +340,7 @@ func (node *Node) join() error {
 			node.config.logger.Error(fmt.Errorf("failed to join cluster: %w", err))
 			return err
 		}
-		node.config.logger.Infof("%s successfully joined cluster: [%s]", node.address, strings.Join(peers, ","))
+		node.config.logger.Infof("%s successfully joined cluster: [%s]", node.discoveryAddress, strings.Join(peers, ","))
 	}
 	return nil
 }
@@ -325,8 +351,11 @@ func (node *Node) eventsListener(eventsCh chan memberlist.NodeEvent) {
 		select {
 		case event := <-eventsCh:
 			// skip this node
-			if event.Node == nil || event.Node.Name == node.config.name {
-				continue
+			if event.Node == nil {
+				addr := net.JoinHostPort(event.Node.Addr.String(), strconv.Itoa(int(event.Node.Port)))
+				if addr == node.DiscoveryAddress() {
+					continue
+				}
 			}
 
 			var eventType EventType

@@ -39,7 +39,7 @@ import (
 type State struct {
 	*sync.RWMutex
 	// node metadata shared in the cluster
-	// for instance the IP address of the node, the name of the node
+	// for instance the IP discoveryAddress of the node, the name of the node
 	// relevant information that can be known by the other peers in the cluster
 	nodeMeta *internalpb.NodeMeta
 	//  node internal state - this is the actual config being gossiped

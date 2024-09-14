@@ -22,20 +22,27 @@
  * SOFTWARE.
  */
 
-package cluster
+package nats
 
-import "github.com/tochemey/gokv/log"
+import (
+	"fmt"
+	"testing"
 
-// logLevel returns the memberlist log level
-func logLevel(logger log.Logger) string {
-	switch logger.LogLevel() {
-	case log.DebugLevel:
-		return "DEBUG"
-	case log.ErrorLevel, log.FatalLevel, log.PanicLevel:
-		return "ERROR"
-	case log.WarningLevel:
-		return "WARN"
-	default:
-		return "INFO"
-	}
+	"github.com/stretchr/testify/assert"
+)
+
+func TestConfig(t *testing.T) {
+	t.Run("With valid configuration", func(t *testing.T) {
+		config := Config{
+			Server:        fmt.Sprintf("nats://%s", "127.0.0.1:234"),
+			Subject:       "subject",
+			Host:          "host",
+			DiscoveryPort: 123,
+		}
+		assert.NoError(t, config.Validate())
+	})
+	t.Run("With invalid configuration", func(t *testing.T) {
+		config := Config{}
+		assert.Error(t, config.Validate())
+	})
 }
