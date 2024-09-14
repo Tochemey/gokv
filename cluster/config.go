@@ -36,6 +36,7 @@ import (
 // Config defines the cluster config
 type Config struct {
 	// specifies the maxJoinAttempts
+	// This specifies the number of attempts to make when trying to join an existing cluster
 	maxJoinAttempts int
 	// specifies the join retry interval
 	joinRetryInterval time.Duration
@@ -44,14 +45,21 @@ type Config struct {
 	// specifies the node client port
 	port uint16
 	// specifies the node discovery port
+	// The discoveryPort is used for both UDP and TCP gossip.
 	discoveryPort uint16
 	// specifies the shutdown timeout
 	shutdownTimeout time.Duration
 	// specifies the logger
 	logger log.Logger
 	// specifies the host
+	// This is the ip address of the running node.
 	host string
 	// specifies the state sync interval
+	// This is the interval between complete state syncs.
+	// Complete state syncs are done with a single node over TCP and are
+	// quite expensive relative to standard gossiped messages.
+	// Setting this interval lower (more frequent) will increase convergence
+	// speeds across larger clusters at the expense of increased bandwidth usage.
 	stateSyncInterval time.Duration
 }
 
