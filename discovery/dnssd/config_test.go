@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2022-2024 Tochemey
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,25 @@
  * SOFTWARE.
  */
 
-package gokv
+package dnssd
 
 import (
-	"errors"
-	"fmt"
+	"testing"
 
-	"github.com/tochemey/gokv/cluster"
+	"github.com/stretchr/testify/assert"
 )
 
-// NewNode creates a distributed key/value store cluster node
-func NewNode(config *cluster.Config) (*cluster.Node, error) {
-	if config == nil {
-		return nil, errors.New("node configuration is required")
-	}
-
-	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid node configuration: %w", err)
-	}
-
-	return cluster.NewNode(config), nil
+func TestConfig(t *testing.T) {
+	t.Run("With valid configuration", func(t *testing.T) {
+		config := &Config{
+			DomainName: "google.com",
+		}
+		assert.NoError(t, config.Validate())
+	})
+	t.Run("With invalid configuration", func(t *testing.T) {
+		config := &Config{
+			DomainName: "",
+		}
+		assert.Error(t, config.Validate())
+	})
 }

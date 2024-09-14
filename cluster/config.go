@@ -78,8 +78,8 @@ func (config *Config) WithDiscoveryProvider(provider discovery.Provider) *Config
 }
 
 // WithDiscoveryPort sets the discovery port
-func (config *Config) WithDiscoveryPort(gossipPort uint16) *Config {
-	config.discoveryPort = gossipPort
+func (config *Config) WithDiscoveryPort(port uint16) *Config {
+	config.discoveryPort = port
 	return config
 }
 
