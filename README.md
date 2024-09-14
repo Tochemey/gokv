@@ -1,4 +1,4 @@
-# Go-KV
+#                                                                                                                                                                                                                                                                                                                                                                                  Go-KV
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Tochemey/gokv/build.yml)]((https://github.com/Tochemey/gokv/actions/workflows/build.yml))
 
@@ -13,20 +13,19 @@ go get github.com/tochemey/gokv
 
 ## Features
 
-- Robust APIs to manipulate key/value pairs. See: [APIs](#apis)
 - Discovery API to implement custom nodes discovery provider. See: [Discovery API](./discovery/provider.go)
 - Comes bundled with some discovery providers that can help you hit the ground running:
     - [kubernetes](https://kubernetes.io/docs/home/) [api integration](./discovery/kubernetes) is fully functional
     - [NATS](https://nats.io/) [integration](./discovery/nats) is fully functional
     - [Static](./discovery/static) is fully functional and for demo purpose
     - [DNS](./discovery/dnssd) is fully functional
-- Built-in [client](./cluster/client.go) to interact with the distributed store via the following apis:
+- Built-in [Client](./cluster/client.go) to interact with the distributed store via the following apis:
     - `Put`: create key/value pair that is eventually distributed in the cluster of nodes. The `key` is a string and the `value` is a byte array.
     - `Get`: retrieves the value of a given `key` from the cluster of nodes.
     - `Delete`: delete a given `key` from the cluster. At the moment the `key` is marked to be `deleted`.
     - `Exists`: check the existence of a given `key` in the cluster.
 
-## Builtin Discovery Providers
+## Builtin Discovery
 
 ### NATS
 
@@ -63,3 +62,5 @@ To get the kubernetes discovery working as expected, the following need to be se
 - `DiscoveryPortName`: the discovery port name
 - `PortName`: the client port name. This port is used by the built-in cluster client for the various operations on the key/value pair distributed store
 - `PodLabels`: the POD labels
+
+Make sure to provide the right RBAC settings to be able to access the pods.
