@@ -41,18 +41,18 @@ type Config struct {
 	joinRetryInterval time.Duration
 	// specifies the discovery provider
 	provider discovery.Provider
-	// specifies the node name
-	name string
 	// specifies the node client port
-	port uint32
-	// specifies the node gossip port
-	gossipPort uint32
+	port uint16
+	// specifies the node discovery port
+	discoveryPort uint16
 	// specifies the shutdown timeout
 	shutdownTimeout time.Duration
 	// specifies the logger
 	logger log.Logger
 	// specifies the host
 	host string
+	// specifies the state sync interval
+	stateSyncInterval time.Duration
 }
 
 // enforce compilation error
@@ -66,14 +66,9 @@ func NewConfig() *Config {
 		maxJoinAttempts:   10,
 		joinRetryInterval: time.Second,
 		shutdownTimeout:   3 * time.Second,
+		stateSyncInterval: time.Minute,
 		logger:            log.New(log.ErrorLevel, os.Stderr),
 	}
-}
-
-// WithName sets the cluster node name
-func (config *Config) WithName(name string) *Config {
-	config.name = name
-	return config
 }
 
 // WithDiscoveryProvider sets the discovery provider
@@ -82,14 +77,14 @@ func (config *Config) WithDiscoveryProvider(provider discovery.Provider) *Config
 	return config
 }
 
-// WithGossipPort sets the gossip port
-func (config *Config) WithGossiPort(gossipPort uint32) *Config {
-	config.gossipPort = gossipPort
+// WithDiscoveryPort sets the discovery port
+func (config *Config) WithDiscoveryPort(gossipPort uint16) *Config {
+	config.discoveryPort = gossipPort
 	return config
 }
 
 // WithPort sets the client port
-func (config *Config) WithPort(port uint32) *Config {
+func (config *Config) WithPort(port uint16) *Config {
 	config.port = port
 	return config
 }
@@ -124,14 +119,23 @@ func (config *Config) WithHost(host string) *Config {
 	return config
 }
 
+// WithStateSyncInterval sets the state sync interval
+func (config *Config) WithStateSyncInterval(interval time.Duration) *Config {
+	config.stateSyncInterval = interval
+	return config
+}
+
 // Validate implements validation.Validator.
 func (config *Config) Validate() error {
 	return validation.
 		New(validation.AllErrors()).
-		AddValidator(validation.NewEmptyStringValidator("name", config.name)).
 		AddAssertion(config.provider != nil, "discovery provider is not set").
-		AddAssertion(config.gossipPort > 0, "gossip port is invalid").
+		AddAssertion(config.discoveryPort > 0, "gossip port is invalid").
 		AddAssertion(config.port > 0, "client port is invalid").
+		AddAssertion(config.joinRetryInterval > 0, "join retry interval is invalid").
+		AddAssertion(config.shutdownTimeout > 0, "shutdown timeout is invalid").
+		AddAssertion(config.maxJoinAttempts > 0, "max join attempts is invalid").
+		AddAssertion(config.stateSyncInterval > 0, "stateSync interval is invalid").
 		AddValidator(validation.NewEmptyStringValidator("host", config.host)).
 		Validate()
 }

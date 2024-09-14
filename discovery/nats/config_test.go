@@ -22,44 +22,27 @@
  * SOFTWARE.
  */
 
-package cluster
+package nats
 
 import (
-	"net"
-	"strconv"
-	"time"
+	"fmt"
+	"testing"
 
-	"google.golang.org/protobuf/proto"
-
-	"github.com/tochemey/gokv/internal/internalpb"
+	"github.com/stretchr/testify/assert"
 )
 
-// Member specifies the cluster member
-type Member struct {
-	Name          string
-	Host          string
-	Port          uint16
-	DiscoveryPort uint16
-	CreatedAt     time.Time
-}
-
-// DiscoveryAddress returns the member discoveryAddress
-func (m *Member) DiscoveryAddress() string {
-	return net.JoinHostPort(m.Host, strconv.Itoa(int(m.DiscoveryPort)))
-}
-
-// MemberFromMeta returns a Member record from
-// a node metadata
-func MemberFromMeta(meta []byte) (*Member, error) {
-	nodeMeta := new(internalpb.NodeMeta)
-	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
-		return nil, err
-	}
-	return &Member{
-		Name:          nodeMeta.GetName(),
-		Host:          nodeMeta.GetHost(),
-		Port:          uint16(nodeMeta.GetPort()),
-		DiscoveryPort: uint16(nodeMeta.GetDiscoveryPort()),
-		CreatedAt:     nodeMeta.GetCreationTime().AsTime(),
-	}, nil
+func TestConfig(t *testing.T) {
+	t.Run("With valid configuration", func(t *testing.T) {
+		config := Config{
+			Server:        fmt.Sprintf("nats://%s", "127.0.0.1:234"),
+			Subject:       "subject",
+			Host:          "host",
+			DiscoveryPort: 123,
+		}
+		assert.NoError(t, config.Validate())
+	})
+	t.Run("With invalid configuration", func(t *testing.T) {
+		config := Config{}
+		assert.Error(t, config.Validate())
+	})
 }

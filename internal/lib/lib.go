@@ -22,20 +22,27 @@
  * SOFTWARE.
  */
 
-package cluster
+package lib
 
-import "github.com/tochemey/gokv/log"
+import (
+	"net"
+	"strconv"
+	"time"
 
-// logLevel returns the memberlist log level
-func logLevel(logger log.Logger) string {
-	switch logger.LogLevel() {
-	case log.DebugLevel:
-		return "DEBUG"
-	case log.ErrorLevel, log.FatalLevel, log.PanicLevel:
-		return "ERROR"
-	case log.WarningLevel:
-		return "WARN"
-	default:
-		return "INFO"
-	}
+	"github.com/tochemey/gokv/internal/types"
+)
+
+// Pause pauses the running process for some time period
+func Pause(duration time.Duration) {
+	stopCh := make(chan types.Unit, 1)
+	timer := time.AfterFunc(duration, func() {
+		stopCh <- types.Unit{}
+	})
+	<-stopCh
+	timer.Stop()
+}
+
+// HostPort returns the combination of host:port
+func HostPort(host string, port int) string {
+	return net.JoinHostPort(host, strconv.Itoa(port))
 }

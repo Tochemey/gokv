@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2022-2024 Tochemey
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,44 +22,34 @@
  * SOFTWARE.
  */
 
-package cluster
+package nats
 
 import (
-	"net"
-	"strconv"
-	"time"
+	"testing"
 
-	"google.golang.org/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 
-	"github.com/tochemey/gokv/internal/internalpb"
+	"github.com/tochemey/gokv/log"
 )
 
-// Member specifies the cluster member
-type Member struct {
-	Name          string
-	Host          string
-	Port          uint16
-	DiscoveryPort uint16
-	CreatedAt     time.Time
-}
-
-// DiscoveryAddress returns the member discoveryAddress
-func (m *Member) DiscoveryAddress() string {
-	return net.JoinHostPort(m.Host, strconv.Itoa(int(m.DiscoveryPort)))
-}
-
-// MemberFromMeta returns a Member record from
-// a node metadata
-func MemberFromMeta(meta []byte) (*Member, error) {
-	nodeMeta := new(internalpb.NodeMeta)
-	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
-		return nil, err
+func TestOptions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		option   Option
+		expected Discovery
+	}{
+		{
+			name:     "WithLogger",
+			option:   WithLogger(log.DefaultLogger),
+			expected: Discovery{logger: log.DefaultLogger},
+		},
 	}
-	return &Member{
-		Name:          nodeMeta.GetName(),
-		Host:          nodeMeta.GetHost(),
-		Port:          uint16(nodeMeta.GetPort()),
-		DiscoveryPort: uint16(nodeMeta.GetDiscoveryPort()),
-		CreatedAt:     nodeMeta.GetCreationTime().AsTime(),
-	}, nil
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var discovery Discovery
+			tc.option.Apply(&discovery)
+			assert.Equal(t, tc.expected, discovery)
+		})
+	}
 }

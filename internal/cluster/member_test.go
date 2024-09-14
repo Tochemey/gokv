@@ -25,41 +25,57 @@
 package cluster
 
 import (
-	"net"
-	"strconv"
+	"reflect"
+	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/tochemey/gokv/internal/internalpb"
+	"github.com/tochemey/gokv/internal/lib"
 )
 
-// Member specifies the cluster member
-type Member struct {
-	Name          string
-	Host          string
-	Port          uint16
-	DiscoveryPort uint16
-	CreatedAt     time.Time
-}
-
-// DiscoveryAddress returns the member discoveryAddress
-func (m *Member) DiscoveryAddress() string {
-	return net.JoinHostPort(m.Host, strconv.Itoa(int(m.DiscoveryPort)))
-}
-
-// MemberFromMeta returns a Member record from
-// a node metadata
-func MemberFromMeta(meta []byte) (*Member, error) {
-	nodeMeta := new(internalpb.NodeMeta)
-	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
-		return nil, err
+func TestMember(t *testing.T) {
+	member := &Member{
+		Name:          "name",
+		Host:          "host",
+		Port:          1234,
+		DiscoveryPort: 1235,
 	}
-	return &Member{
-		Name:          nodeMeta.GetName(),
-		Host:          nodeMeta.GetHost(),
-		Port:          uint16(nodeMeta.GetPort()),
-		DiscoveryPort: uint16(nodeMeta.GetDiscoveryPort()),
-		CreatedAt:     nodeMeta.GetCreationTime().AsTime(),
-	}, nil
+	expected := lib.HostPort("host", 1235)
+	assert.Equal(t, expected, member.DiscoveryAddress())
+}
+
+func TestMemberFromMeta(t *testing.T) {
+	// caution make sure to set the time to UTC
+	// then the reflect.DeepEqual will work
+	creationTime := time.Now().UTC()
+	meta := &internalpb.NodeMeta{
+		Name:          "name",
+		Host:          "host",
+		Port:          1234,
+		DiscoveryPort: 1235,
+		CreationTime:  timestamppb.New(creationTime),
+	}
+
+	bytea, err := proto.Marshal(meta)
+	require.NoError(t, err)
+	require.NotEmpty(t, bytea)
+
+	expected := &Member{
+		Name:          "name",
+		Host:          "host",
+		Port:          1234,
+		DiscoveryPort: 1235,
+		CreatedAt:     creationTime,
+	}
+
+	actual, err := MemberFromMeta(bytea)
+	require.NoError(t, err)
+	require.NotNil(t, actual)
+	assert.IsType(t, new(Member), actual)
+	assert.True(t, reflect.DeepEqual(expected, actual))
 }

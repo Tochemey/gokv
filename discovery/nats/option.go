@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2022-2024 Tochemey
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,44 +22,29 @@
  * SOFTWARE.
  */
 
-package cluster
+package nats
 
-import (
-	"net"
-	"strconv"
-	"time"
+import "github.com/tochemey/gokv/log"
 
-	"google.golang.org/protobuf/proto"
-
-	"github.com/tochemey/gokv/internal/internalpb"
-)
-
-// Member specifies the cluster member
-type Member struct {
-	Name          string
-	Host          string
-	Port          uint16
-	DiscoveryPort uint16
-	CreatedAt     time.Time
+// Option is the interface that applies a configuration option.
+type Option interface {
+	// Apply sets the Option value of a config.
+	Apply(disco *Discovery)
 }
 
-// DiscoveryAddress returns the member discoveryAddress
-func (m *Member) DiscoveryAddress() string {
-	return net.JoinHostPort(m.Host, strconv.Itoa(int(m.DiscoveryPort)))
+var _ Option = OptionFunc(nil)
+
+// OptionFunc implements the Option interface.
+type OptionFunc func(disco *Discovery)
+
+// Apply applies the Cluster's option
+func (f OptionFunc) Apply(disco *Discovery) {
+	f(disco)
 }
 
-// MemberFromMeta returns a Member record from
-// a node metadata
-func MemberFromMeta(meta []byte) (*Member, error) {
-	nodeMeta := new(internalpb.NodeMeta)
-	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
-		return nil, err
-	}
-	return &Member{
-		Name:          nodeMeta.GetName(),
-		Host:          nodeMeta.GetHost(),
-		Port:          uint16(nodeMeta.GetPort()),
-		DiscoveryPort: uint16(nodeMeta.GetDiscoveryPort()),
-		CreatedAt:     nodeMeta.GetCreationTime().AsTime(),
-	}, nil
+// WithLogger sets the logger
+func WithLogger(logger log.Logger) Option {
+	return OptionFunc(func(disco *Discovery) {
+		disco.logger = logger
+	})
 }

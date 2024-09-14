@@ -55,6 +55,7 @@ linters-settings:
     ignore-words:
       - cancelled
       - behaviour
+      - initialised
 
   goheader:
     template: |-
