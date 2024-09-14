@@ -81,6 +81,35 @@ func (client *Client) Get(ctx context.Context, key string) ([]byte, error) {
 	return response.Msg.GetKv().GetValue(), nil
 }
 
+// Delete deletes a given key from the cluster
+func (client *Client) Delete(ctx context.Context, key string) error {
+	if !client.connected.Load() {
+		return ErrClientNotConnected
+	}
+	_, err := client.kvService.Delete(ctx, connect.NewRequest(&internalpb.DeleteRequest{
+		Key: key,
+	}))
+
+	return err
+}
+
+// Exists checks the existence of a given key in the cluster
+func (client *Client) Exists(ctx context.Context, key string) (bool, error) {
+	if !client.connected.Load() {
+		return false, ErrClientNotConnected
+	}
+
+	response, err := client.kvService.KeyExists(ctx, connect.NewRequest(&internalpb.KeyExistsRequest{
+		Key: key,
+	}))
+
+	if err != nil {
+		return false, err
+	}
+
+	return response.Msg.GetExists(), nil
+}
+
 // Close closes the client connection to the cluster
 func (client *Client) Close() error {
 	// no-op when the client is not connected

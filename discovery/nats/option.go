@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2022-2024 Tochemey
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,33 +22,29 @@
  * SOFTWARE.
  */
 
-package cluster
+package nats
 
-import (
-	"google.golang.org/protobuf/proto"
+import "github.com/tochemey/gokv/log"
 
-	"github.com/tochemey/gokv/internal/internalpb"
-)
-
-// Member specifies the cluster member
-type Member struct {
-	Name       string
-	Host       string
-	Port       uint32
-	GossipPort uint32
+// Option is the interface that applies a configuration option.
+type Option interface {
+	// Apply sets the Option value of a config.
+	Apply(disco *Discovery)
 }
 
-// MemberFromMeta returns a Member record from
-// a node metadata
-func MemberFromMeta(meta []byte) (*Member, error) {
-	nodeMeta := new(internalpb.NodeMeta)
-	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
-		return nil, err
-	}
-	return &Member{
-		Name:       nodeMeta.GetName(),
-		Host:       nodeMeta.GetHost(),
-		Port:       nodeMeta.GetPort(),
-		GossipPort: nodeMeta.GetGossipPort(),
-	}, nil
+var _ Option = OptionFunc(nil)
+
+// OptionFunc implements the Option interface.
+type OptionFunc func(disco *Discovery)
+
+// Apply applies the Cluster's option
+func (f OptionFunc) Apply(disco *Discovery) {
+	f(disco)
+}
+
+// WithLogger sets the logger
+func WithLogger(logger log.Logger) Option {
+	return OptionFunc(func(disco *Discovery) {
+		disco.logger = logger
+	})
 }

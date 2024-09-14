@@ -22,33 +22,20 @@
  * SOFTWARE.
  */
 
-package cluster
+package lib
 
 import (
-	"google.golang.org/protobuf/proto"
+	"time"
 
-	"github.com/tochemey/gokv/internal/internalpb"
+	"github.com/tochemey/gokv/internal/types"
 )
 
-// Member specifies the cluster member
-type Member struct {
-	Name       string
-	Host       string
-	Port       uint32
-	GossipPort uint32
-}
-
-// MemberFromMeta returns a Member record from
-// a node metadata
-func MemberFromMeta(meta []byte) (*Member, error) {
-	nodeMeta := new(internalpb.NodeMeta)
-	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
-		return nil, err
-	}
-	return &Member{
-		Name:       nodeMeta.GetName(),
-		Host:       nodeMeta.GetHost(),
-		Port:       nodeMeta.GetPort(),
-		GossipPort: nodeMeta.GetGossipPort(),
-	}, nil
+// Pause pauses the running process for some time period
+func Pause(duration time.Duration) {
+	stopCh := make(chan types.Unit, 1)
+	timer := time.AfterFunc(duration, func() {
+		stopCh <- types.Unit{}
+	})
+	<-stopCh
+	timer.Stop()
 }

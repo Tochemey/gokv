@@ -53,6 +53,8 @@ type Config struct {
 	logger log.Logger
 	// specifies the host
 	host string
+	// specifies the state sync interval
+	stateSyncInterval time.Duration
 }
 
 // enforce compilation error
@@ -66,6 +68,7 @@ func NewConfig() *Config {
 		maxJoinAttempts:   10,
 		joinRetryInterval: time.Second,
 		shutdownTimeout:   3 * time.Second,
+		stateSyncInterval: time.Minute,
 		logger:            log.New(log.ErrorLevel, os.Stderr),
 	}
 }
@@ -83,7 +86,7 @@ func (config *Config) WithDiscoveryProvider(provider discovery.Provider) *Config
 }
 
 // WithGossipPort sets the gossip port
-func (config *Config) WithGossiPort(gossipPort uint32) *Config {
+func (config *Config) WithGossipPort(gossipPort uint32) *Config {
 	config.gossipPort = gossipPort
 	return config
 }
@@ -124,6 +127,12 @@ func (config *Config) WithHost(host string) *Config {
 	return config
 }
 
+// WithStateSyncInterval sets the state sync interval
+func (config *Config) WithStateSyncInterval(interval time.Duration) *Config {
+	config.stateSyncInterval = interval
+	return config
+}
+
 // Validate implements validation.Validator.
 func (config *Config) Validate() error {
 	return validation.
@@ -132,6 +141,10 @@ func (config *Config) Validate() error {
 		AddAssertion(config.provider != nil, "discovery provider is not set").
 		AddAssertion(config.gossipPort > 0, "gossip port is invalid").
 		AddAssertion(config.port > 0, "client port is invalid").
+		AddAssertion(config.joinRetryInterval > 0, "join retry interval is invalid").
+		AddAssertion(config.shutdownTimeout > 0, "shutdown timeout is invalid").
+		AddAssertion(config.maxJoinAttempts > 0, "max join attempts is invalid").
+		AddAssertion(config.stateSyncInterval > 0, "stateSync interval is invalid").
 		AddValidator(validation.NewEmptyStringValidator("host", config.host)).
 		Validate()
 }

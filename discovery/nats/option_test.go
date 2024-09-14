@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2022-2024 Tochemey
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,33 +22,34 @@
  * SOFTWARE.
  */
 
-package cluster
+package nats
 
 import (
-	"google.golang.org/protobuf/proto"
+	"testing"
 
-	"github.com/tochemey/gokv/internal/internalpb"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/tochemey/gokv/log"
 )
 
-// Member specifies the cluster member
-type Member struct {
-	Name       string
-	Host       string
-	Port       uint32
-	GossipPort uint32
-}
-
-// MemberFromMeta returns a Member record from
-// a node metadata
-func MemberFromMeta(meta []byte) (*Member, error) {
-	nodeMeta := new(internalpb.NodeMeta)
-	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
-		return nil, err
+func TestOptions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		option   Option
+		expected Discovery
+	}{
+		{
+			name:     "WithLogger",
+			option:   WithLogger(log.DefaultLogger),
+			expected: Discovery{logger: log.DefaultLogger},
+		},
 	}
-	return &Member{
-		Name:       nodeMeta.GetName(),
-		Host:       nodeMeta.GetHost(),
-		Port:       nodeMeta.GetPort(),
-		GossipPort: nodeMeta.GetGossipPort(),
-	}, nil
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var discovery Discovery
+			tc.option.Apply(&discovery)
+			assert.Equal(t, tc.expected, discovery)
+		})
+	}
 }

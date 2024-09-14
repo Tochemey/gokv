@@ -22,33 +22,7 @@
  * SOFTWARE.
  */
 
-package cluster
+package types
 
-import (
-	"google.golang.org/protobuf/proto"
-
-	"github.com/tochemey/gokv/internal/internalpb"
-)
-
-// Member specifies the cluster member
-type Member struct {
-	Name       string
-	Host       string
-	Port       uint32
-	GossipPort uint32
-}
-
-// MemberFromMeta returns a Member record from
-// a node metadata
-func MemberFromMeta(meta []byte) (*Member, error) {
-	nodeMeta := new(internalpb.NodeMeta)
-	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
-		return nil, err
-	}
-	return &Member{
-		Name:       nodeMeta.GetName(),
-		Host:       nodeMeta.GetHost(),
-		Port:       nodeMeta.GetPort(),
-		GossipPort: nodeMeta.GetGossipPort(),
-	}, nil
-}
+// Unit type
+type Unit struct{}

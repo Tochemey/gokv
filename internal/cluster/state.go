@@ -109,10 +109,13 @@ func (state *State) MergeRemoteState(buf []byte, join bool) {
 
 	currentState := state.nodeState.GetState()
 	for key, value := range remoteState.GetState() {
-		currentValue := currentState[key]
-		if !proto.Equal(currentValue, value) {
-			state.nodeState.State[key] = value
+		if currentValue, ok := currentState[key]; ok {
+			if !currentValue.GetTombstone() && !proto.Equal(currentValue, value) {
+				state.nodeState.State[key] = value
+			}
+			continue
 		}
+		state.nodeState.State[key] = value
 	}
 
 	state.Unlock()
@@ -125,6 +128,7 @@ func (state *State) Put(key string, value []byte) {
 		Key:       key,
 		Value:     value,
 		CreatedAt: timestamppb.New(time.Now().UTC()),
+		Tombstone: false,
 	}
 	state.Unlock()
 }
@@ -139,18 +143,31 @@ func (state *State) Get(key string) *internalpb.KV {
 
 // Delete deletes the given key from the cluster
 func (state *State) Delete(key string) {
+	state.Lock()
+	kv, ok := state.nodeState.GetState()[key]
+	if !ok {
+		return
+	}
+	kv.Tombstone = true
+	state.nodeState.State[key] = kv
+	state.Unlock()
+}
+
+// Exists checks whether a given exists
+func (state *State) Exists(key string) bool {
 	state.RLock()
-	internalState := state.nodeState.GetState()
-	delete(internalState, key)
-	state.nodeState.State = internalState
+	kv, ok := state.nodeState.GetState()[key]
 	state.RUnlock()
+	return ok && !kv.GetTombstone()
 }
 
 // newState creates a new State
 func newState(meta *internalpb.NodeMeta) *State {
 	return &State{
-		RWMutex:   &sync.RWMutex{},
-		nodeMeta:  meta,
-		nodeState: &internalpb.NodeState{},
+		RWMutex:  &sync.RWMutex{},
+		nodeMeta: meta,
+		nodeState: &internalpb.NodeState{
+			State: make(map[string]*internalpb.KV),
+		},
 	}
 }
