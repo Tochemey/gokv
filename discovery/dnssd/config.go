@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2022-2024 Tochemey
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,22 @@
  * SOFTWARE.
  */
 
-package gokv
+package dnssd
 
-import (
-	"errors"
-	"fmt"
+import "github.com/tochemey/gokv/internal/validation"
 
-	"github.com/tochemey/gokv/cluster"
-)
+// Config defines the discovery configuration
+type Config struct {
+	// Domain specifies the dns name
+	DomainName string
+	// IPv6 states whether to fetch ipv6 address instead of ipv4
+	// if it is false then all addresses are extracted
+	IPv6 *bool
+}
 
-// NewNode creates a distributed key/value store cluster node
-func NewNode(config *cluster.Config) (*cluster.Node, error) {
-	if config == nil {
-		return nil, errors.New("node configuration is required")
-	}
-
-	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid node configuration: %w", err)
-	}
-
-	return cluster.NewNode(config), nil
+// Validate checks whether the given discovery configuration is valid
+func (x Config) Validate() error {
+	return validation.New(validation.FailFast()).
+		AddValidator(validation.NewEmptyStringValidator("Namespace", x.DomainName)).
+		Validate()
 }

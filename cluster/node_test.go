@@ -33,9 +33,9 @@ import (
 	natsserver "github.com/nats-io/nats-server/v2/server"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/tochemey/goakt/v2/discovery"
 	"github.com/travisjeffery/go-dynaport"
 
+	"github.com/tochemey/gokv/discovery"
 	"github.com/tochemey/gokv/discovery/nats"
 	"github.com/tochemey/gokv/internal/lib"
 	"github.com/tochemey/gokv/log"

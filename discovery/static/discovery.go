@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2022-2024 Tochemey
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,53 @@
  * SOFTWARE.
  */
 
-package gokv
+package static
 
-import (
-	"errors"
-	"fmt"
+import "github.com/tochemey/gokv/discovery"
 
-	"github.com/tochemey/gokv/cluster"
-)
+// Discovery represents the static discovery provider
+type Discovery struct {
+	config *Config
+}
 
-// NewNode creates a distributed key/value store cluster node
-func NewNode(config *cluster.Config) (*cluster.Node, error) {
-	if config == nil {
-		return nil, errors.New("node configuration is required")
+// enforce compilation error
+var _ discovery.Provider = &Discovery{}
+
+// NewDiscovery creates an instance of the static discovery provider
+func NewDiscovery(config *Config) *Discovery {
+	d := &Discovery{
+		config: config,
 	}
 
-	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid node configuration: %w", err)
-	}
+	return d
+}
 
-	return cluster.NewNode(config), nil
+// ID returns the discovery provider identifier
+func (d *Discovery) ID() string {
+	return "static"
+}
+
+// Initialize the discovery provider
+func (d *Discovery) Initialize() error {
+	return d.config.Validate()
+}
+
+// Register registers this node to a service discovery directory.
+func (d *Discovery) Register() error {
+	return nil
+}
+
+// Deregister removes this node from a service discovery directory.
+func (d *Discovery) Deregister() error {
+	return nil
+}
+
+// Close closes the provider
+func (d *Discovery) Close() error {
+	return nil
+}
+
+// DiscoverPeers returns a list of known nodes.
+func (d *Discovery) DiscoverPeers() ([]string, error) {
+	return d.config.Hosts, nil
 }

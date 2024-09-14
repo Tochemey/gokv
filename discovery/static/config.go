@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2022-2024 Tochemey
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,24 +22,25 @@
  * SOFTWARE.
  */
 
-package gokv
+package static
 
-import (
-	"errors"
-	"fmt"
+import "github.com/tochemey/gokv/internal/validation"
 
-	"github.com/tochemey/gokv/cluster"
-)
+// Config represents the static discovery provider configuration
+type Config struct {
+	// Hosts defines the list of hosts in the form of ip:port where the port is the  gossip port.
+	Hosts []string
+}
 
-// NewNode creates a distributed key/value store cluster node
-func NewNode(config *cluster.Config) (*cluster.Node, error) {
-	if config == nil {
-		return nil, errors.New("node configuration is required")
+// Validate checks whether the given discovery configuration is valid
+func (x Config) Validate() error {
+	chain := validation.
+		New(validation.FailFast()).
+		AddAssertion(len(x.Hosts) != 0, "hosts are required")
+
+	for _, host := range x.Hosts {
+		chain = chain.AddValidator(validation.NewTCPAddressValidator(host))
 	}
 
-	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid node configuration: %w", err)
-	}
-
-	return cluster.NewNode(config), nil
+	return chain.Validate()
 }
