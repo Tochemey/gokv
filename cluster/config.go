@@ -54,9 +54,9 @@ type Config struct {
 	// specifies the host
 	// This is the ip address of the running node.
 	host string
-	// specifies the state sync interval
-	// This is the interval between complete state syncs.
-	// Complete state syncs are done with a single node over TCP and are
+	// specifies the delegate sync interval
+	// This is the interval between complete delegate syncs.
+	// Complete delegate syncs are done with a single node over TCP and are
 	// quite expensive relative to standard gossiped messages.
 	// Setting this interval lower (more frequent) will increase convergence
 	// speeds across larger clusters at the expense of increased bandwidth usage.
@@ -127,7 +127,7 @@ func (config *Config) WithHost(host string) *Config {
 	return config
 }
 
-// WithStateSyncInterval sets the state sync interval
+// WithStateSyncInterval sets the delegate sync interval
 func (config *Config) WithStateSyncInterval(interval time.Duration) *Config {
 	config.stateSyncInterval = interval
 	return config

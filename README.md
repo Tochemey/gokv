@@ -1,4 +1,4 @@
-#                                                                                                                                                                                                                                                                                                                                                                                  Go-KV
+# Go-KV
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Tochemey/gokv/build.yml)]((https://github.com/Tochemey/gokv/actions/workflows/build.yml))
 
@@ -23,7 +23,6 @@ go get github.com/tochemey/gokv
 - Built-in [Client](./cluster/client.go) to interact with the distributed store via the following apis:
     - `Put`: create key/value pair that is eventually distributed in the cluster of nodes. The `key` is a string and the `value` is a byte array.
     - `Get`: retrieves the value of a given `key` from the cluster of nodes.
-    - `Delete`: delete a given `key` from the cluster. At the moment the `key` is marked to be `deleted`.
     - `Exists`: check the existence of a given `key` in the cluster.
 
 ## Builtin Discovery

@@ -46,3 +46,8 @@ func Pause(duration time.Duration) {
 func HostPort(host string, port int) string {
 	return net.JoinHostPort(host, strconv.Itoa(port))
 }
+
+// Ptr creates a pointer of a primitive
+func Ptr[T any](v T) *T {
+	return &v
+}
