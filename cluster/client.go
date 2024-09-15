@@ -41,11 +41,7 @@ type Client struct {
 	// http client
 	httpClient *nethttp.Client
 	// host defines the host discoveryAddress
-	host string
-	// port defines the gRCP port for client connections
-	port      int
 	kvService internalpbconnect.KVServiceClient
-
 	connected *atomic.Bool
 }
 
@@ -54,10 +50,11 @@ func (client *Client) Put(ctx context.Context, key string, value []byte) error {
 	if !client.connected.Load() {
 		return ErrClientNotConnected
 	}
-	_, err := client.kvService.Put(ctx, connect.NewRequest(&internalpb.PutRequest{
-		Key:   key,
-		Value: value,
-	}))
+	_, err := client.kvService.Put(ctx, connect.NewRequest(
+		&internalpb.PutRequest{
+			Key:   key,
+			Value: value,
+		}))
 	return err
 }
 
@@ -66,9 +63,10 @@ func (client *Client) Get(ctx context.Context, key string) ([]byte, error) {
 	if !client.connected.Load() {
 		return nil, ErrClientNotConnected
 	}
-	response, err := client.kvService.Get(ctx, connect.NewRequest(&internalpb.GetRequest{
-		Key: key,
-	}))
+	response, err := client.kvService.Get(ctx, connect.NewRequest(
+		&internalpb.GetRequest{
+			Key: key,
+		}))
 
 	if err != nil {
 		code := connect.CodeOf(err)
@@ -78,19 +76,22 @@ func (client *Client) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, err
 	}
 
-	return response.Msg.GetKv().GetValue(), nil
+	return response.Msg.GetValue(), nil
 }
 
 // Delete deletes a given key from the cluster
+// nolint
 func (client *Client) Delete(ctx context.Context, key string) error {
-	if !client.connected.Load() {
-		return ErrClientNotConnected
-	}
-	_, err := client.kvService.Delete(ctx, connect.NewRequest(&internalpb.DeleteRequest{
-		Key: key,
-	}))
-
-	return err
+	//if !client.connected.Load() {
+	//	return ErrClientNotConnected
+	//}
+	//_, err := client.kvService.Delete(ctx, connect.NewRequest(
+	//	&internalpb.DeleteRequest{
+	//		Key: key,
+	//	}))
+	//
+	//return err
+	return nil
 }
 
 // Exists checks the existence of a given key in the cluster
@@ -99,9 +100,10 @@ func (client *Client) Exists(ctx context.Context, key string) (bool, error) {
 		return false, ErrClientNotConnected
 	}
 
-	response, err := client.kvService.KeyExists(ctx, connect.NewRequest(&internalpb.KeyExistsRequest{
-		Key: key,
-	}))
+	response, err := client.kvService.KeyExists(ctx, connect.NewRequest(
+		&internalpb.KeyExistsRequest{
+			Key: key,
+		}))
 
 	if err != nil {
 		return false, err
@@ -132,8 +134,6 @@ func newClient(host string, port int) *Client {
 	return &Client{
 		httpClient: httpClient,
 		kvService:  kvService,
-		host:       host,
-		port:       port,
 		connected:  atomic.NewBool(true),
 	}
 }

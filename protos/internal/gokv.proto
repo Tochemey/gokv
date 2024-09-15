@@ -18,11 +18,27 @@ service KVService {
   rpc KeyExists(KeyExistsRequest) returns (KeyExistResponse);
 }
 
+// Entry represents the key/value pair
+message Entry {
+  // Specifies the value
+  bytes value = 1;
+  // States whether it is archived or not
+  optional bool archived = 3;
+}
+
 // NodeState defines the node state
 // This will be distributed in the cluster
 message NodeState {
-  // Specifies the node state
-  map<string, KV> state = 1;
+  // Specifies the nodeId
+  string node_id = 1;
+  // Specifies the entries
+  map<string, Entry> entries = 2;
+}
+
+// FSM defines the delegate FSM
+message FSM {
+  // Specifies the list of node states
+  repeated NodeState node_states = 1;
 }
 
 // NodeMeta defines the node metadata
@@ -39,18 +55,6 @@ message NodeMeta {
   google.protobuf.Timestamp creation_time = 5;
 }
 
-// KV defines the key/value pair
-message KV {
-  // Specifies the key
-  string key = 1;
-  // Specifies the value
-  bytes value = 2;
-  // Specifies the creation time timestamp
-  google.protobuf.Timestamp created_at = 3;
-  // States that given is marked for tombstone
-  bool tombstone = 4;
-}
-
 // GetRequest is used to fetch the value of a given key
 message GetRequest {
   // Specifies the key
@@ -60,7 +64,7 @@ message GetRequest {
 // GetResponse is the response to GetRequest
 message GetResponse {
   // Specifies the KV
-  KV kv = 1;
+  bytes value = 1;
 }
 
 // PutRequest is used to distribute a given key/value

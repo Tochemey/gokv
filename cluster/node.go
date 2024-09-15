@@ -38,7 +38,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/atomic"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/tochemey/gokv/internal/errorschain"
@@ -55,9 +54,9 @@ type Node struct {
 
 	config *Config
 
-	// state holds the node state
-	// through memberlist this state will be eventually gossiped to the rest of the cluster
-	state *State
+	// delegate holds the node delegate
+	// through memberlist this delegate will be eventually gossiped to the rest of the cluster
+	delegate *Delegate
 
 	memberConfig *memberlist.Config
 	memberlist   *memberlist.Memberlist
@@ -93,19 +92,21 @@ func NewNode(config *Config) *Node {
 		DiscoveryPort: uint32(config.discoveryPort),
 		CreationTime:  timestamppb.New(time.Now().UTC()),
 	}
-	state := newState(meta)
-	mconfig.Delegate = state
+
+	discoveryAddr := lib.HostPort(config.host, int(config.discoveryPort))
+	delegate := newDelegate(discoveryAddr, meta)
+	mconfig.Delegate = delegate
 
 	return &Node{
 		mu:                 new(sync.Mutex),
-		state:              state,
+		delegate:           delegate,
 		memberConfig:       mconfig,
 		started:            atomic.NewBool(false),
 		eventsChan:         make(chan *Event, 1),
 		stopEventsListener: make(chan struct{}, 1),
 		eventsLock:         new(sync.Mutex),
 		config:             config,
-		discoveryAddress:   lib.HostPort(config.host, int(config.discoveryPort)),
+		discoveryAddress:   discoveryAddr,
 	}
 }
 
@@ -177,7 +178,7 @@ func (node *Node) Stop(ctx context.Context) error {
 
 // Put is used to distribute a key/value pair across a cluster of nodes
 // nolint
-func (node *Node) Put(ctx context.Context, request *connect.Request[internalpb.PutRequest]) (*connect.Response[internalpb.PutResponse], error) {
+func (node *Node) Put(_ context.Context, request *connect.Request[internalpb.PutRequest]) (*connect.Response[internalpb.PutResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
 		node.mu.Unlock()
@@ -185,7 +186,7 @@ func (node *Node) Put(ctx context.Context, request *connect.Request[internalpb.P
 	}
 
 	req := request.Msg
-	node.state.Put(req.GetKey(), req.GetValue())
+	node.delegate.Put(req.GetKey(), req.GetValue())
 	node.mu.Unlock()
 
 	return connect.NewResponse(new(internalpb.PutResponse)), nil
@@ -193,7 +194,7 @@ func (node *Node) Put(ctx context.Context, request *connect.Request[internalpb.P
 
 // Get is used to retrieve a key/value pair in a cluster of nodes
 // nolint
-func (node *Node) Get(ctx context.Context, request *connect.Request[internalpb.GetRequest]) (*connect.Response[internalpb.GetResponse], error) {
+func (node *Node) Get(_ context.Context, request *connect.Request[internalpb.GetRequest]) (*connect.Response[internalpb.GetResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
 		node.mu.Unlock()
@@ -201,21 +202,21 @@ func (node *Node) Get(ctx context.Context, request *connect.Request[internalpb.G
 	}
 
 	req := request.Msg
-	kv := node.state.Get(req.GetKey())
-	if kv == nil || proto.Equal(kv, new(internalpb.KV)) {
+	entry := node.delegate.Get(req.GetKey())
+	if len(entry) == 0 {
 		node.mu.Unlock()
 		return nil, connect.NewError(connect.CodeNotFound, ErrKeyNotFound)
 	}
 
 	node.mu.Unlock()
 	return connect.NewResponse(&internalpb.GetResponse{
-		Kv: kv,
+		Value: entry,
 	}), nil
 }
 
 // Delete is used to remove a key/value pair from a cluster of nodes
 // nolint
-func (node *Node) Delete(ctx context.Context, request *connect.Request[internalpb.DeleteRequest]) (*connect.Response[internalpb.DeleteResponse], error) {
+func (node *Node) Delete(_ context.Context, request *connect.Request[internalpb.DeleteRequest]) (*connect.Response[internalpb.DeleteResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
 		node.mu.Unlock()
@@ -223,7 +224,7 @@ func (node *Node) Delete(ctx context.Context, request *connect.Request[internalp
 	}
 
 	req := request.Msg
-	node.state.Delete(req.GetKey())
+	node.delegate.Delete(req.GetKey())
 	node.mu.Unlock()
 
 	return connect.NewResponse(new(internalpb.DeleteResponse)), nil
@@ -231,7 +232,7 @@ func (node *Node) Delete(ctx context.Context, request *connect.Request[internalp
 
 // KeyExists is used to check the existence of a given key in the cluster
 // nolint
-func (node *Node) KeyExists(ctx context.Context, request *connect.Request[internalpb.KeyExistsRequest]) (*connect.Response[internalpb.KeyExistResponse], error) {
+func (node *Node) KeyExists(_ context.Context, request *connect.Request[internalpb.KeyExistsRequest]) (*connect.Response[internalpb.KeyExistResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
 		node.mu.Unlock()
@@ -239,7 +240,7 @@ func (node *Node) KeyExists(ctx context.Context, request *connect.Request[intern
 	}
 
 	req := request.Msg
-	exists := node.state.Exists(req.GetKey())
+	exists := node.delegate.Exists(req.GetKey())
 	node.mu.Unlock()
 	return connect.NewResponse(&internalpb.KeyExistResponse{Exists: exists}), nil
 }
