@@ -213,20 +213,16 @@ func (d *Delegate) Get(key string) []byte {
 }
 
 // Delete deletes the given key from the cluster
-// TODO: fix the implementation or remove it completely
+// One can only delete a key if the given node is the owner
 func (d *Delegate) Delete(key string) {
 	d.Lock()
 	defer d.Unlock()
-	localState := d.fsm
 
-	// first check the key existence and overwrite when found
-	for _, nodeState := range localState.GetNodeStates() {
-		for k, entry := range nodeState.GetEntries() {
-			if k == key {
-				nodeState.Entries[k] = &internalpb.Entry{
-					Value:    entry.GetValue(),
-					Archived: lib.Ptr(true),
-				}
+	for index, nodeState := range d.fsm.GetNodeStates() {
+		for k := range nodeState.GetEntries() {
+			if k == key && nodeState.GetNodeId() == d.me {
+				nodeState.Entries[key].Archived = lib.Ptr(true)
+				d.fsm.NodeStates[index] = nodeState
 				return
 			}
 		}
