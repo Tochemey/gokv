@@ -73,7 +73,7 @@ var _ validation.Validator = (*Config)(nil)
 func NewConfig() *Config {
 	return &Config{
 		host:              "0.0.0.0",
-		maxJoinAttempts:   10,
+		maxJoinAttempts:   5,
 		joinRetryInterval: time.Second,
 		shutdownTimeout:   3 * time.Second,
 		stateSyncInterval: time.Minute,
@@ -146,10 +146,8 @@ func (config *Config) WithReadTimeout(timeout time.Duration) *Config {
 // Validate implements validation.Validator.
 func (config *Config) Validate() error {
 	return validation.
-		New(validation.AllErrors()).
+		New(validation.FailFast()).
 		AddAssertion(config.provider != nil, "discovery provider is not set").
-		AddAssertion(config.discoveryPort > 0, "gossip port is invalid").
-		AddAssertion(config.port > 0, "client port is invalid").
 		AddAssertion(config.joinRetryInterval > 0, "join retry interval is invalid").
 		AddAssertion(config.shutdownTimeout > 0, "shutdown timeout is invalid").
 		AddAssertion(config.maxJoinAttempts > 0, "max join attempts is invalid").
