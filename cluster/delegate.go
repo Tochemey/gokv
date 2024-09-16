@@ -231,7 +231,7 @@ func (d *Delegate) Put(key string, value []byte, expiration time.Duration) {
 }
 
 // Get returns the value of the given key
-func (d *Delegate) Get(key string) []byte {
+func (d *Delegate) Get(key string) ([]byte, error) {
 	d.RLock()
 	defer d.RUnlock()
 	localState := d.fsm
@@ -239,13 +239,13 @@ func (d *Delegate) Get(key string) []byte {
 		for k, entry := range nodeState.GetEntries() {
 			if k == key {
 				if expired(entry) {
-					return nil
+					return nil, ErrKeyNotFound
 				}
-				return entry.GetValue()
+				return entry.GetValue(), nil
 			}
 		}
 	}
-	return nil
+	return nil, ErrKeyNotFound
 }
 
 // Delete deletes the given key from the cluster
@@ -277,7 +277,7 @@ func (d *Delegate) Exists(key string) bool {
 				if expired(entry) {
 					return false
 				}
-				return !entry.GetArchived() && len(entry.GetValue()) > 0
+				return !entry.GetArchived()
 			}
 		}
 	}

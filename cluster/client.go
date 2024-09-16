@@ -76,16 +76,6 @@ func (client *Client) PutString(ctx context.Context, key string, value string, e
 	return client.Put(ctx, key, []byte(value), expiration)
 }
 
-// PutAny distributes the key/value pair in the cluster.
-// A binary encoder is required to properly encode the value.
-func (client *Client) PutAny(ctx context.Context, key string, value any, expiration time.Duration, codec Codec) error {
-	bytea, err := codec.Encode(value)
-	if err != nil {
-		return err
-	}
-	return client.Put(ctx, key, bytea, expiration)
-}
-
 // Get retrieves the value of the given key from the cluster
 func (client *Client) Get(ctx context.Context, key string) ([]byte, error) {
 	if !client.connected.Load() {
@@ -99,7 +89,7 @@ func (client *Client) Get(ctx context.Context, key string) ([]byte, error) {
 	if err != nil {
 		code := connect.CodeOf(err)
 		if code == connect.CodeNotFound {
-			return nil, nil
+			return nil, ErrKeyNotFound
 		}
 		return nil, err
 	}
@@ -119,23 +109,13 @@ func (client *Client) GetProto(ctx context.Context, key string, dst proto.Messag
 
 // GetString retrieves the value of the given from the cluster as a string
 // Prior to calling this method one must set a string as the value of the key
-func (client *Client) GetString(ctx context.Context, key string, dst string) error {
+func (client *Client) GetString(ctx context.Context, key string) (string, error) {
 	bytea, err := client.Get(ctx, key)
 	if err != nil {
-		return err
+		return "", err
 	}
-	dst = string(bytea)
-	return nil
-}
 
-// GetAny retrieves the value of the given from the cluster
-// Prior to calling this method one must set a string as the value of the key
-func (client *Client) GetAny(ctx context.Context, key string, codec Codec) (any, error) {
-	bytea, err := client.Get(ctx, key)
-	if err != nil {
-		return nil, err
-	}
-	return codec.Decode(bytea)
+	return string(bytea), nil
 }
 
 // Delete deletes a given key from the cluster

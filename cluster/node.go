@@ -207,10 +207,10 @@ func (node *Node) Get(ctx context.Context, request *connect.Request[internalpb.G
 	}
 
 	req := request.Msg
-	entry := node.delegate.Get(req.GetKey())
-	if len(entry) == 0 {
+	entry, err := node.delegate.Get(req.GetKey())
+	if err != nil {
 		node.mu.Unlock()
-		return nil, connect.NewError(connect.CodeNotFound, ErrKeyNotFound)
+		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
 	node.mu.Unlock()
