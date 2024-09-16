@@ -25,11 +25,12 @@
 package cluster
 
 import (
-	"maps"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/tochemey/gokv/internal/internalpb"
 	"github.com/tochemey/gokv/internal/lib"
@@ -118,22 +119,46 @@ func (d *Delegate) MergeRemoteState(buf []byte, join bool) {
 	// iterate all the entries coming from the remote node
 	// 1. if there is corresponding node ID in the node local state, combine the local state entries for that nodeID with the remote node entries
 	// 2. if there is no corresponding node ID in the node local state, set the entries with the remote entries
-	for _, nodeState := range remoteFSM.GetNodeStates() {
-		localEntries, ok := entries[nodeState.GetNodeId()]
+	for _, remoteNodeState := range remoteFSM.GetNodeStates() {
+		localEntries, ok := entries[remoteNodeState.GetNodeId()]
 		if !ok {
-			entries[nodeState.GetNodeId()] = nodeState.GetEntries()
+			entries[remoteNodeState.GetNodeId()] = remoteNodeState.GetEntries()
 			continue
 		}
 
+		// create entries when no entries are defined
 		if len(localEntries) == 0 {
 			localEntries = make(map[string]*internalpb.Entry)
 		}
 
-		maps.Copy(localEntries, nodeState.GetEntries())
-		entries[nodeState.GetNodeId()] = localEntries
+		/*******************************************************************************
+		small algorithm to merge incoming remote state entries with the local state entries
+		 ********************************************************************************/
+		// 1. iterate the incoming state entries
+		for key, remoteEntry := range remoteNodeState.GetEntries() {
+			// 2. check whether an incoming key already exists
+			localEntry, ok := localEntries[key]
+			// 3. if the key does not exist then add it as part of the existing entries
+			if !ok {
+				localEntries[key] = remoteEntry
+				continue
+			}
+
+			// 4. if the key entry exists then check its timestamp against the incoming entry
+			// 5. if the existing key entry is newer compared to the incoming entry ignore the incoming entry
+			if localEntry.GetTimestamp().AsTime().Unix() > remoteEntry.GetTimestamp().AsTime().Unix() {
+				continue
+			}
+
+			// 6. if the existing key entry is older compared to the incoming entry, t
+			// hen add the incoming entry as part of the existing entries
+			localEntries[key] = remoteEntry
+		}
+
+		entries[remoteNodeState.GetNodeId()] = localEntries
 	}
 
-	// iterate the entries and build the new nodeState list
+	// iterate the entries and build the new remoteNodeState list
 	nodeStates := make([]*internalpb.NodeState, 0, len(entries))
 	for k, v := range entries {
 		nodeStates = append(nodeStates, &internalpb.NodeState{
@@ -142,7 +167,7 @@ func (d *Delegate) MergeRemoteState(buf []byte, join bool) {
 		})
 	}
 
-	// set the local node state with the new nodeState list
+	// set the local node state with the new remoteNodeState list
 	d.fsm.NodeStates = nodeStates
 }
 
@@ -159,8 +184,9 @@ func (d *Delegate) Put(key string, value []byte) {
 		for k := range nodeState.GetEntries() {
 			if k == key {
 				nodeState.Entries[k] = &internalpb.Entry{
-					Value:    value,
-					Archived: nil,
+					Value:     value,
+					Archived:  nil,
+					Timestamp: timestamppb.New(time.Now().UTC()),
 				}
 				keyExists = true
 				break
@@ -222,6 +248,7 @@ func (d *Delegate) Delete(key string) {
 		for k := range nodeState.GetEntries() {
 			if k == key && nodeState.GetNodeId() == d.me {
 				nodeState.Entries[key].Archived = lib.Ptr(true)
+				nodeState.Entries[key].Timestamp = timestamppb.New(time.Now().UTC())
 				d.fsm.NodeStates[index] = nodeState
 				return
 			}

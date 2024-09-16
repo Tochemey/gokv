@@ -24,6 +24,8 @@ message Entry {
   bytes value = 1;
   // States whether it is archived or not
   optional bool archived = 3;
+  // Specifies the timestamp
+  google.protobuf.Timestamp timestamp = 4;
 }
 
 // NodeState defines the node state
