@@ -1,6 +1,7 @@
 ## Go-KV
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Tochemey/gokv/build.yml)]((https://github.com/Tochemey/gokv/actions/workflows/build.yml))
+[![codecov](https://codecov.io/gh/Tochemey/gokv/graph/badge.svg?token=L9KEvLkm09)](https://codecov.io/gh/Tochemey/gokv)
 
 Simple Distributed in-memory key/value store. GoKV provides high availability and fault tolerance which makes it suitable large-scale applications system without sacrificing performance and reliability. 
 With GoKV, you can instantly create a fast, scalable, distributed system  across a cluster of computers. 
