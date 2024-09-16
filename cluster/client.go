@@ -27,6 +27,7 @@ package cluster
 import (
 	"context"
 	nethttp "net/http"
+	"time"
 
 	"connectrpc.com/connect"
 	"go.uber.org/atomic"
@@ -46,14 +47,16 @@ type Client struct {
 }
 
 // Put distributes the key/value pair in the cluster
-func (client *Client) Put(ctx context.Context, key string, value []byte) error {
+func (client *Client) Put(ctx context.Context, key string, value []byte, expiration time.Duration) error {
 	if !client.connected.Load() {
 		return ErrClientNotConnected
 	}
+
 	_, err := client.kvService.Put(ctx, connect.NewRequest(
 		&internalpb.PutRequest{
-			Key:   key,
-			Value: value,
+			Key:    key,
+			Value:  value,
+			Expiry: setExpiry(expiration),
 		}))
 	return err
 }
