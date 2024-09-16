@@ -37,12 +37,12 @@ jobs:
       - name: Run tests
         run: |
           go-acc ./... -o coverage.out --ignore internal/internalpb -- -mod=vendor -race -v
-      # - uses: codecov/codecov-action@v4
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-      #     files: ./coverage.out
-      #     fail_ci_if_error: false
-      #     verbose: true
+      - uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.out
+          fail_ci_if_error: false
+          verbose: true
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
