@@ -101,7 +101,7 @@ func main() {
 
 	// let us distribute the key in the cluster. At the moment we only have one node
 	// Put will override an existing key in the cluster
-	if err := client.Put(ctx, key, value); err != nil {
+	if err := client.Put(ctx, key, value, cluster.NoExpiration); err != nil {
 		logger.Fatal(err)
 	}
 

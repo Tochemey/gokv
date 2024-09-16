@@ -28,8 +28,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/hashicorp/memberlist"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/tochemey/gokv/internal/internalpb"
@@ -172,12 +174,15 @@ func (d *Delegate) MergeRemoteState(buf []byte, join bool) {
 }
 
 // Put adds the key/value to the store
-func (d *Delegate) Put(key string, value []byte) {
+func (d *Delegate) Put(key string, value []byte, expiration time.Duration) {
 	d.Lock()
 	defer d.Unlock()
 
 	localState := d.fsm
 	keyExists := false
+
+	timestamp := timestamppb.New(time.Now().UTC())
+	expiry := setExpiry(expiration)
 
 	// first check the key existence and overwrite when found
 	for _, nodeState := range localState.GetNodeStates() {
@@ -185,8 +190,8 @@ func (d *Delegate) Put(key string, value []byte) {
 			if k == key {
 				nodeState.Entries[k] = &internalpb.Entry{
 					Value:     value,
-					Archived:  nil,
-					Timestamp: timestamppb.New(time.Now().UTC()),
+					Timestamp: timestamp,
+					Expiry:    expiry,
 				}
 				keyExists = true
 				break
@@ -207,16 +212,18 @@ func (d *Delegate) Put(key string, value []byte) {
 			if len(nodeState.GetEntries()) == 0 {
 				nodeState.Entries = map[string]*internalpb.Entry{
 					key: {
-						Value:    value,
-						Archived: nil,
+						Value:     value,
+						Timestamp: timestamp,
+						Expiry:    expiry,
 					},
 				}
 				return
 			}
 
 			nodeState.GetEntries()[key] = &internalpb.Entry{
-				Value:    value,
-				Archived: nil,
+				Value:     value,
+				Timestamp: timestamp,
+				Expiry:    expiry,
 			}
 			return
 		}
@@ -231,6 +238,9 @@ func (d *Delegate) Get(key string) []byte {
 	for _, nodeState := range localState.GetNodeStates() {
 		for k, entry := range nodeState.GetEntries() {
 			if k == key {
+				if expired(entry) {
+					return nil
+				}
 				return entry.GetValue()
 			}
 		}
@@ -264,6 +274,9 @@ func (d *Delegate) Exists(key string) bool {
 	for _, nodeState := range localState.GetNodeStates() {
 		for k, entry := range nodeState.GetEntries() {
 			if k == key {
+				if expired(entry) {
+					return false
+				}
 				return !entry.GetArchived() && len(entry.GetValue()) > 0
 			}
 		}
@@ -286,4 +299,25 @@ func newDelegate(name string, meta *internalpb.NodeMeta) *Delegate {
 			},
 		},
 	}
+}
+
+// expired returns true if the item has expired.
+func expired(entry *internalpb.Entry) bool {
+	if entry.GetExpiry() == nil {
+		return false
+	}
+	expiration := entry.GetTimestamp().AsTime().Unix()
+	if expiration <= 0 {
+		return false
+	}
+	return time.Now().UTC().Unix() > expiration
+}
+
+// setExpiry sets the expiry time
+func setExpiry(expiration time.Duration) *duration.Duration {
+	var expiry *durationpb.Duration
+	if expiration > 0 {
+		expiry = durationpb.New(expiration)
+	}
+	return expiry
 }
