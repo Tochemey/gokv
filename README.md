@@ -26,11 +26,9 @@ go get github.com/tochemey/gokv
     - `Put`: create key/value pair that is eventually distributed in the cluster of nodes. The `key` is a string and the `value` is a byte array.
     - `PutProto`: to create a key/value pair where the value is a protocol buffer message
     - `PutString`: to create a key/value pair where the value is a string
-    - `PutAny`: to create a key/value pair with a given [`Codec`](./cluster/codec.go) to encode the value type.
     - `Get`: retrieves the value of a given `key` from the cluster of nodes.
     - `GetProto`: retrieves a protocol buffer message for a given `key`. This requires `PutProto` or `Put` to be used to set the value.
     - `GetString`: retrieves a string value for a given `key`. This requires `PutString` or `Put` to be used to set the value.
-    - `GetAny`: retrieves any value type for a given `key`. This requires `PutAny` to be used to set the value.
     - `Exists`: check the existence of a given `key` in the cluster.
     - `Delete`: delete a given `key` from the cluster. At the moment the `key` is marked to be `archived`.
 

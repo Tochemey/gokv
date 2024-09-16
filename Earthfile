@@ -89,7 +89,9 @@ protogen:
     # generate the pbs
     RUN buf generate \
             --template buf.gen.yaml \
-            --path protos/internal
+            --path protos/internal \
+            --path protos/test
 
     # save artifact to
     SAVE ARTIFACT gen/internal AS LOCAL internal/internalpb
+    SAVE ARTIFACT gen/test AS LOCAL  test/data/testpb
