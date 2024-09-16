@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package internalpb;
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/tochemey/gokv/internal/internalpb;internalpb";
@@ -26,6 +27,8 @@ message Entry {
   optional bool archived = 3;
   // Specifies the timestamp
   google.protobuf.Timestamp timestamp = 4;
+  // Specifies the expiration
+  google.protobuf.Duration expiry = 5;
 }
 
 // NodeState defines the node state
@@ -75,6 +78,8 @@ message PutRequest {
   string key = 1;
   // Specifies the value
   bytes value = 2;
+  // Specifies the expiration
+  google.protobuf.Duration expiry = 3;
 }
 
 // PutResponse is the response to PutRequest

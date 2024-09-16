@@ -61,6 +61,8 @@ type Config struct {
 	// Setting this interval lower (more frequent) will increase convergence
 	// speeds across larger clusters at the expense of increased bandwidth usage.
 	stateSyncInterval time.Duration
+
+	readTimeout time.Duration
 }
 
 // enforce compilation error
@@ -76,6 +78,7 @@ func NewConfig() *Config {
 		shutdownTimeout:   3 * time.Second,
 		stateSyncInterval: time.Minute,
 		logger:            log.New(log.ErrorLevel, os.Stderr),
+		readTimeout:       time.Second,
 	}
 }
 
@@ -130,6 +133,13 @@ func (config *Config) WithHost(host string) *Config {
 // WithStateSyncInterval sets the delegate sync interval
 func (config *Config) WithStateSyncInterval(interval time.Duration) *Config {
 	config.stateSyncInterval = interval
+	return config
+}
+
+// WithReadTimeout sets the Node read timeout.
+// This timeout specifies the timeout of a data retrieval
+func (config *Config) WithReadTimeout(timeout time.Duration) *Config {
+	config.readTimeout = timeout
 	return config
 }
 

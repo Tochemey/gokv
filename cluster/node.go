@@ -48,6 +48,11 @@ import (
 	"github.com/tochemey/gokv/internal/tcp"
 )
 
+const (
+	// NoExpiration is used to state there is no expiration
+	NoExpiration time.Duration = -1
+)
+
 // Node defines the cluster node
 type Node struct {
 	internalpbconnect.UnimplementedKVServiceHandler
@@ -186,7 +191,7 @@ func (node *Node) Put(_ context.Context, request *connect.Request[internalpb.Put
 	}
 
 	req := request.Msg
-	node.delegate.Put(req.GetKey(), req.GetValue())
+	node.delegate.Put(req.GetKey(), req.GetValue(), req.GetExpiry().AsDuration())
 	node.mu.Unlock()
 
 	return connect.NewResponse(new(internalpb.PutResponse)), nil
@@ -194,7 +199,7 @@ func (node *Node) Put(_ context.Context, request *connect.Request[internalpb.Put
 
 // Get is used to retrieve a key/value pair in a cluster of nodes
 // nolint
-func (node *Node) Get(_ context.Context, request *connect.Request[internalpb.GetRequest]) (*connect.Response[internalpb.GetResponse], error) {
+func (node *Node) Get(ctx context.Context, request *connect.Request[internalpb.GetRequest]) (*connect.Response[internalpb.GetResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
 		node.mu.Unlock()

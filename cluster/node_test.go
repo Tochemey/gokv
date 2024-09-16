@@ -61,7 +61,7 @@ func TestNodes(t *testing.T) {
 	// let us distribute a key in the cluster
 	key := "some-key"
 	value := []byte("some-value")
-	err := node2.Client().Put(ctx, key, value)
+	err := node2.Client().Put(ctx, key, value, NoExpiration)
 	require.NoError(t, err)
 
 	// wait for the key to be distributed in the cluster
