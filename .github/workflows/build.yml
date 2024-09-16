@@ -32,7 +32,7 @@ jobs:
           go install github.com/ory/go-acc@latest
       - name: Run tests
         run: |
-          go-acc ./... -o coverage.out --ignore internal/internalpb -- -mod=vendor -race -v
+          go-acc ./... -o coverage.out --ignore internal/internalpb,test/data/testpb -- -mod=vendor -race -v
       - uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
