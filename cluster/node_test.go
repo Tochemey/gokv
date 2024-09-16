@@ -143,11 +143,11 @@ L:
 	require.NotNil(t, event)
 	require.True(t, event.Type == NodeJoined)
 	actualAddr := event.Member.DiscoveryAddress()
-	require.Equal(t, node2.DiscoveryAddress(), actualAddr)
+	require.Equal(t, node2.HostPort(), actualAddr)
 	peers, err := node1.Peers()
 	require.NoError(t, err)
 	require.Len(t, peers, 1)
-	require.Equal(t, node2.DiscoveryAddress(), peers[0].DiscoveryAddress())
+	require.Equal(t, node2.HostPort(), peers[0].DiscoveryAddress())
 
 	// wait for some time
 	lib.Pause(time.Second)
@@ -179,7 +179,7 @@ L2:
 	require.NotNil(t, event)
 	require.True(t, event.Type == NodeLeft)
 	actualAddr = event.Member.DiscoveryAddress()
-	require.Equal(t, node2.DiscoveryAddress(), actualAddr)
+	require.Equal(t, node2.HostPort(), actualAddr)
 
 	t.Cleanup(func() {
 		assert.NoError(t, node1.Stop(ctx))

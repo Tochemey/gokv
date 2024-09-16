@@ -39,6 +39,8 @@ import (
 )
 
 // Client defines the cluster client
+// This client can connect to any Go-KV cluster node and retrieve data from other
+// of the cluster.
 type Client struct {
 	// http client
 	httpClient *nethttp.Client
@@ -150,8 +152,8 @@ func (client *Client) Exists(ctx context.Context, key string) (bool, error) {
 	return response.Msg.GetExists(), nil
 }
 
-// close closes the client connection to the cluster
-func (client *Client) close() error {
+// Close closes the client connection to the cluster
+func (client *Client) Close() error {
 	// no-op when the client is not connected
 	if !client.connected.Load() {
 		return nil
@@ -161,8 +163,9 @@ func (client *Client) close() error {
 	return nil
 }
 
-// newClient creates an instance of the cluster Client
-func newClient(host string, port int) *Client {
+// NewClient creates an instance of the cluster Client
+// host and port are a Go-KV cluster node host and port
+func NewClient(host string, port int) *Client {
 	httpClient := http.NewClient()
 	kvService := internalpbconnect.NewKVServiceClient(
 		httpClient,

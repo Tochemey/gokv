@@ -136,7 +136,7 @@ func (node *Node) Start(ctx context.Context) error {
 	node.memberConfig.Events = &memberlist.ChannelEventDelegate{
 		Ch: eventsCh,
 	}
-	node.clusterClient = newClient(node.config.host, int(node.config.port))
+	node.clusterClient = NewClient(node.config.host, int(node.config.port))
 	node.started.Store(true)
 	node.mu.Unlock()
 
@@ -167,7 +167,7 @@ func (node *Node) Stop(ctx context.Context) error {
 
 	if err := errorschain.
 		New(errorschain.ReturnFirst()).
-		AddError(node.clusterClient.close()).
+		AddError(node.clusterClient.Close()).
 		AddError(node.memberlist.Leave(node.config.shutdownTimeout)).
 		AddError(node.config.provider.Deregister()).
 		AddError(node.config.provider.Close()).
@@ -266,8 +266,8 @@ func (node *Node) Events() <-chan *Event {
 	return ch
 }
 
-// DiscoveryAddress returns the node discoveryAddress
-func (node *Node) DiscoveryAddress() string {
+// HostPort returns the node host:port address
+func (node *Node) HostPort() string {
 	node.mu.Lock()
 	address := node.discoveryAddress
 	node.mu.Unlock()
@@ -285,7 +285,7 @@ func (node *Node) Peers() ([]*Member, error) {
 		if err != nil {
 			return nil, err
 		}
-		if member != nil && member.DiscoveryAddress() != node.DiscoveryAddress() {
+		if member != nil && member.DiscoveryAddress() != node.HostPort() {
 			members = append(members, member)
 		}
 	}
@@ -359,7 +359,7 @@ func (node *Node) eventsListener(eventsCh chan memberlist.NodeEvent) {
 			// skip this node
 			if event.Node == nil {
 				addr := net.JoinHostPort(event.Node.Addr.String(), strconv.Itoa(int(event.Node.Port)))
-				if addr == node.DiscoveryAddress() {
+				if addr == node.HostPort() {
 					continue
 				}
 			}

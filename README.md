@@ -15,8 +15,8 @@ go get github.com/tochemey/gokv
 ### Features
 
 - Go-KV uses the push-pull anti-entropy method to replicate nodes' state across the cluster. This approach makes Go-KV eventually consistent.
-  One can set the [`stateSyncInterval`](./cluster/config.go) value to low for frequent state synchronisation at a network cost.
-- Discovery API to implement custom nodes discovery provider. See: [Discovery API](./discovery/provider.go)
+  One can set the [`stateSyncInterval`](./cluster/config.go) value to low for frequent state synchronisation at a network cost. 
+- Discovery API to implement custom nodes discovery provider. See: [discovery](./discovery/provider.go)
 - Comes bundled with some discovery providers that can help you hit the ground running:
     - [kubernetes](https://kubernetes.io/docs/home/) [api integration](./discovery/kubernetes) is fully functional
     - [nats](https://nats.io/) [integration](./discovery/nats) is fully functional
