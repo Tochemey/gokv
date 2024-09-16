@@ -39,6 +39,8 @@ import (
 )
 
 // Client defines the cluster client
+// This client can connect to any Go-KV cluster node and retrieve data from other
+// of the cluster.
 type Client struct {
 	// http client
 	httpClient *nethttp.Client
