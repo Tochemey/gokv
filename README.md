@@ -3,8 +3,7 @@
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Tochemey/gokv/build.yml)]((https://github.com/Tochemey/gokv/actions/workflows/build.yml))
 
 Simple Distributed in-memory key/value store. GoKV provides high availability and fault tolerance which makes it suitable large-scale applications system without sacrificing performance and reliability. 
-With GoKV, you can instantly create a fast, scalable, distributed system  across a cluster of computers. Go-KV uses the push-pull anti-entropy method to replicate nodes' state across the cluster. This 
-approach makes Go-KV eventually consistent. 
+With GoKV, you can instantly create a fast, scalable, distributed system  across a cluster of computers. 
 
 ## Installation
 
@@ -14,6 +13,8 @@ go get github.com/tochemey/gokv
 
 ## Features
 
+- Go-KV uses the push-pull anti-entropy method to replicate nodes' state across the cluster. This approach makes Go-KV eventually consistent.
+  One can set the [`stateSyncInterval`](./cluster/config.go) value to low for frequent state synchronisation at a network cost.
 - Discovery API to implement custom nodes discovery provider. See: [Discovery API](./discovery/provider.go)
 - Comes bundled with some discovery providers that can help you hit the ground running:
     - [kubernetes](https://kubernetes.io/docs/home/) [api integration](./discovery/kubernetes) is fully functional
@@ -24,6 +25,15 @@ go get github.com/tochemey/gokv
     - `Put`: create key/value pair that is eventually distributed in the cluster of nodes. The `key` is a string and the `value` is a byte array.
     - `Get`: retrieves the value of a given `key` from the cluster of nodes.
     - `Exists`: check the existence of a given `key` in the cluster.
+    - `Delete`: delete a given `key` from the cluster. At the moment the `key` is marked to be `archived`.
+
+## Use Cases
+
+- Distributed cache
+
+## Example
+
+There is an example on how to use it with NATs [here](./example/example.go)
 
 ## Builtin Discovery
 
