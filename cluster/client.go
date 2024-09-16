@@ -31,6 +31,7 @@ import (
 
 	"connectrpc.com/connect"
 	"go.uber.org/atomic"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/tochemey/gokv/internal/http"
 	"github.com/tochemey/gokv/internal/internalpb"
@@ -61,6 +62,30 @@ func (client *Client) Put(ctx context.Context, key string, value []byte, expirat
 	return err
 }
 
+// PutProto creates a key/value pair  where the value is a proto message and distributes in the cluster
+func (client *Client) PutProto(ctx context.Context, key string, value proto.Message, expiration time.Duration) error {
+	bytea, err := proto.Marshal(value)
+	if err != nil {
+		return err
+	}
+	return client.Put(ctx, key, bytea, expiration)
+}
+
+// PutString creates a key/value pair where the value is a string and distributes in the cluster
+func (client *Client) PutString(ctx context.Context, key string, value string, expiration time.Duration) error {
+	return client.Put(ctx, key, []byte(value), expiration)
+}
+
+// PutAny distributes the key/value pair in the cluster.
+// A binary encoder is required to properly encode the value.
+func (client *Client) PutAny(ctx context.Context, key string, value any, expiration time.Duration, codec Codec) error {
+	bytea, err := codec.Encode(value)
+	if err != nil {
+		return err
+	}
+	return client.Put(ctx, key, bytea, expiration)
+}
+
 // Get retrieves the value of the given key from the cluster
 func (client *Client) Get(ctx context.Context, key string) ([]byte, error) {
 	if !client.connected.Load() {
@@ -80,6 +105,37 @@ func (client *Client) Get(ctx context.Context, key string) ([]byte, error) {
 	}
 
 	return response.Msg.GetValue(), nil
+}
+
+// GetProto retrieves the value of the given from the cluster as protocol buffer message
+// Prior to calling this method one must set a proto message as the value of the key
+func (client *Client) GetProto(ctx context.Context, key string, dst proto.Message) error {
+	bytea, err := client.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	return proto.Unmarshal(bytea, dst)
+}
+
+// GetString retrieves the value of the given from the cluster as a string
+// Prior to calling this method one must set a string as the value of the key
+func (client *Client) GetString(ctx context.Context, key string, dst string) error {
+	bytea, err := client.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	dst = string(bytea)
+	return nil
+}
+
+// GetAny retrieves the value of the given from the cluster
+// Prior to calling this method one must set a string as the value of the key
+func (client *Client) GetAny(ctx context.Context, key string, codec Codec) (any, error) {
+	bytea, err := client.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return codec.Decode(bytea)
 }
 
 // Delete deletes a given key from the cluster
@@ -114,8 +170,8 @@ func (client *Client) Exists(ctx context.Context, key string) (bool, error) {
 	return response.Msg.GetExists(), nil
 }
 
-// Close closes the client connection to the cluster
-func (client *Client) Close() error {
+// close closes the client connection to the cluster
+func (client *Client) close() error {
 	// no-op when the client is not connected
 	if !client.connected.Load() {
 		return nil

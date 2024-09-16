@@ -167,7 +167,7 @@ func (node *Node) Stop(ctx context.Context) error {
 
 	if err := errorschain.
 		New(errorschain.ReturnFirst()).
-		AddError(node.clusterClient.Close()).
+		AddError(node.clusterClient.close()).
 		AddError(node.memberlist.Leave(node.config.shutdownTimeout)).
 		AddError(node.config.provider.Deregister()).
 		AddError(node.config.provider.Close()).
