@@ -101,7 +101,7 @@ func main() {
 
 	// let us distribute the key in the cluster. At the moment we only have one node
 	// Put will override an existing key in the cluster
-	if err := client.Put(ctx, key, value, cluster.NoExpiration); err != nil {
+	if err := client.Put(ctx, &cluster.Entry{Key: key, Value: value}, cluster.NoExpiration); err != nil {
 		logger.Fatal(err)
 	}
 
@@ -121,15 +121,15 @@ func main() {
 	logger.Infof("key %s exist", key)
 
 	// let us get the key value back from the cluster
-	bytea, err := client.Get(ctx, key)
+	entry, err := client.Get(ctx, key)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
-	if !bytes.Equal(bytea, value) {
+	if !bytes.Equal(entry.Value, value) {
 		logger.Fatal("failed to get key value back from the cluster")
 	}
-	logger.Infof("key %s value %s successfully retrieved from the cluster", key, string(bytea))
+	logger.Infof("key %s value %s successfully retrieved from the cluster", key, string(entry.Value))
 
 	// capture ctrl+c
 	interruptSignal := make(chan os.Signal, 1)
