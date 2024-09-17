@@ -31,7 +31,6 @@ import (
 
 	"connectrpc.com/connect"
 	"go.uber.org/atomic"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/tochemey/gokv/internal/http"
 	"github.com/tochemey/gokv/internal/internalpb"
@@ -50,36 +49,22 @@ type Client struct {
 }
 
 // Put distributes the key/value pair in the cluster
-func (client *Client) Put(ctx context.Context, key string, value []byte, expiration time.Duration) error {
+func (client *Client) Put(ctx context.Context, entry *Entry, expiration time.Duration) error {
 	if !client.connected.Load() {
 		return ErrClientNotConnected
 	}
 
 	_, err := client.kvService.Put(ctx, connect.NewRequest(
 		&internalpb.PutRequest{
-			Key:    key,
-			Value:  value,
+			Key:    entry.Key,
+			Value:  entry.Value,
 			Expiry: setExpiry(expiration),
 		}))
 	return err
 }
 
-// PutProto creates a key/value pair  where the value is a proto message and distributes in the cluster
-func (client *Client) PutProto(ctx context.Context, key string, value proto.Message, expiration time.Duration) error {
-	bytea, err := proto.Marshal(value)
-	if err != nil {
-		return err
-	}
-	return client.Put(ctx, key, bytea, expiration)
-}
-
-// PutString creates a key/value pair where the value is a string and distributes in the cluster
-func (client *Client) PutString(ctx context.Context, key string, value string, expiration time.Duration) error {
-	return client.Put(ctx, key, []byte(value), expiration)
-}
-
 // Get retrieves the value of the given key from the cluster
-func (client *Client) Get(ctx context.Context, key string) ([]byte, error) {
+func (client *Client) Get(ctx context.Context, key string) (*Entry, error) {
 	if !client.connected.Load() {
 		return nil, ErrClientNotConnected
 	}
@@ -96,28 +81,25 @@ func (client *Client) Get(ctx context.Context, key string) ([]byte, error) {
 		return nil, err
 	}
 
-	return response.Msg.GetValue(), nil
+	return fromNode(response.Msg.GetEntry()), nil
 }
 
-// GetProto retrieves the value of the given from the cluster as protocol buffer message
-// Prior to calling this method one must set a proto message as the value of the key
-func (client *Client) GetProto(ctx context.Context, key string, dst proto.Message) error {
-	bytea, err := client.Get(ctx, key)
-	if err != nil {
-		return err
-	}
-	return proto.Unmarshal(bytea, dst)
-}
-
-// GetString retrieves the value of the given from the cluster as a string
-// Prior to calling this method one must set a string as the value of the key
-func (client *Client) GetString(ctx context.Context, key string) (string, error) {
-	bytea, err := client.Get(ctx, key)
-	if err != nil {
-		return "", err
+// List returns the list of entries at a point in time
+func (client *Client) List(ctx context.Context) ([]*Entry, error) {
+	if !client.connected.Load() {
+		return nil, ErrClientNotConnected
 	}
 
-	return string(bytea), nil
+	response, err := client.kvService.List(ctx, connect.NewRequest(&internalpb.ListRequest{}))
+	if err != nil {
+		return nil, err
+	}
+
+	entries := make([]*Entry, 0, len(response.Msg.GetEntries()))
+	for _, entry := range response.Msg.GetEntries() {
+		entries = append(entries, fromNode(entry))
+	}
+	return entries, nil
 }
 
 // Delete deletes a given key from the cluster

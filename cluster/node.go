@@ -183,7 +183,7 @@ func (node *Node) Stop(ctx context.Context) error {
 
 // Put is used to distribute a key/value pair across a cluster of nodes
 // nolint
-func (node *Node) Put(_ context.Context, request *connect.Request[internalpb.PutRequest]) (*connect.Response[internalpb.PutResponse], error) {
+func (node *Node) Put(ctx context.Context, request *connect.Request[internalpb.PutRequest]) (*connect.Response[internalpb.PutResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
 		node.mu.Unlock()
@@ -215,13 +215,13 @@ func (node *Node) Get(ctx context.Context, request *connect.Request[internalpb.G
 
 	node.mu.Unlock()
 	return connect.NewResponse(&internalpb.GetResponse{
-		Value: entry,
+		Entry: entry,
 	}), nil
 }
 
 // Delete is used to remove a key/value pair from a cluster of nodes
 // nolint
-func (node *Node) Delete(_ context.Context, request *connect.Request[internalpb.DeleteRequest]) (*connect.Response[internalpb.DeleteResponse], error) {
+func (node *Node) Delete(ctx context.Context, request *connect.Request[internalpb.DeleteRequest]) (*connect.Response[internalpb.DeleteResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
 		node.mu.Unlock()
@@ -237,7 +237,7 @@ func (node *Node) Delete(_ context.Context, request *connect.Request[internalpb.
 
 // KeyExists is used to check the existence of a given key in the cluster
 // nolint
-func (node *Node) KeyExists(_ context.Context, request *connect.Request[internalpb.KeyExistsRequest]) (*connect.Response[internalpb.KeyExistResponse], error) {
+func (node *Node) KeyExists(ctx context.Context, request *connect.Request[internalpb.KeyExistsRequest]) (*connect.Response[internalpb.KeyExistResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
 		node.mu.Unlock()
@@ -248,6 +248,20 @@ func (node *Node) KeyExists(_ context.Context, request *connect.Request[internal
 	exists := node.delegate.Exists(req.GetKey())
 	node.mu.Unlock()
 	return connect.NewResponse(&internalpb.KeyExistResponse{Exists: exists}), nil
+}
+
+// List returns the list of all entries at a given point in time
+// nolint
+func (node *Node) List(ctx context.Context, request *connect.Request[internalpb.ListRequest]) (*connect.Response[internalpb.ListResponse], error) {
+	node.mu.Lock()
+	if !node.started.Load() {
+		node.mu.Unlock()
+		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrNodeNotStarted)
+	}
+
+	entries := node.delegate.List()
+	node.mu.Unlock()
+	return connect.NewResponse(&internalpb.ListResponse{Entries: entries}), nil
 }
 
 // Client returns the cluster Client

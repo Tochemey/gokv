@@ -27,6 +27,7 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -61,7 +62,8 @@ func TestNodes(t *testing.T) {
 	// let us distribute a key in the cluster
 	key := "some-key"
 	value := []byte("some-value")
-	err := node2.Client().Put(ctx, key, value, NoExpiration)
+	entry := &Entry{key, value}
+	err := node2.Client().Put(ctx, entry, NoExpiration)
 	require.NoError(t, err)
 
 	// wait for the key to be distributed in the cluster
@@ -73,16 +75,16 @@ func TestNodes(t *testing.T) {
 	require.True(t, exists)
 	actual, err := node1.Client().Get(ctx, key)
 	require.NoError(t, err)
-	require.NotEmpty(t, actual)
-	require.Equal(t, value, actual)
+	require.NotNil(t, actual)
+	require.True(t, reflect.DeepEqual(entry, actual))
 
 	exists, err = node3.Client().Exists(ctx, key)
 	require.NoError(t, err)
 	require.True(t, exists)
 	actual, err = node3.Client().Get(ctx, key)
 	require.NoError(t, err)
-	require.NotEmpty(t, actual)
-	require.Equal(t, value, actual)
+	require.NotNil(t, actual)
+	require.True(t, reflect.DeepEqual(entry, actual))
 
 	// let us remove the key
 	require.NoError(t, node2.Client().Delete(ctx, key))

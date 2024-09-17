@@ -26,7 +26,6 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -39,86 +38,7 @@ import (
 )
 
 func TestClient(t *testing.T) {
-	t.Run("With PutProto GetProto", func(t *testing.T) {
-		ctx := context.Background()
-		// start the NATS server
-		srv := startNatsServer(t)
-		// create a cluster node1
-		node1, sd1 := startNode(t, srv.Addr().String())
-		require.NotNil(t, node1)
-
-		// create a cluster node2
-		node2, sd2 := startNode(t, srv.Addr().String())
-		require.NotNil(t, node2)
-
-		key := "my-key"
-		value := new(testpb.Hello)
-		err := node2.Client().PutProto(ctx, key, value, NoExpiration)
-		require.NoError(t, err)
-
-		// wait for the key to be distributed in the cluster
-		lib.Pause(time.Second)
-
-		// let us retrieve the key from the other nodes
-		exists, err := node1.Client().Exists(ctx, key)
-		require.NoError(t, err)
-		require.True(t, exists)
-
-		actual := &testpb.Hello{}
-		err = node1.Client().GetProto(ctx, key, actual)
-		require.NoError(t, err)
-
-		assert.True(t, proto.Equal(value, actual))
-
-		lib.Pause(time.Second)
-		t.Cleanup(func() {
-			assert.NoError(t, node1.Stop(ctx))
-			assert.NoError(t, node2.Stop(ctx))
-			assert.NoError(t, sd1.Close())
-			assert.NoError(t, sd2.Close())
-			srv.Shutdown()
-		})
-	})
-	t.Run("With PutString GetString", func(t *testing.T) {
-		ctx := context.Background()
-		// start the NATS server
-		srv := startNatsServer(t)
-		// create a cluster node1
-		node1, sd1 := startNode(t, srv.Addr().String())
-		require.NotNil(t, node1)
-
-		// create a cluster node2
-		node2, sd2 := startNode(t, srv.Addr().String())
-		require.NotNil(t, node2)
-
-		key := "my-key"
-		value := "my-value"
-		err := node2.Client().PutString(ctx, key, value, NoExpiration)
-		require.NoError(t, err)
-
-		// wait for the key to be distributed in the cluster
-		lib.Pause(time.Second)
-
-		// let us retrieve the key from the other nodes
-		exists, err := node1.Client().Exists(ctx, key)
-		require.NoError(t, err)
-		require.True(t, exists)
-
-		actual, err := node1.Client().GetString(ctx, key)
-		require.NoError(t, err)
-		require.NotEmpty(t, actual)
-		require.Equal(t, value, actual)
-
-		lib.Pause(time.Second)
-		t.Cleanup(func() {
-			assert.NoError(t, node1.Stop(ctx))
-			assert.NoError(t, node2.Stop(ctx))
-			assert.NoError(t, sd1.Close())
-			assert.NoError(t, sd2.Close())
-			srv.Shutdown()
-		})
-	})
-	t.Run("With PutProto GetProto with expiration", func(t *testing.T) {
+	t.Run("With Put Get with expiration", func(t *testing.T) {
 		ctx := context.Background()
 		// start the NATS server
 		srv := startNatsServer(t)
@@ -133,7 +53,14 @@ func TestClient(t *testing.T) {
 		expiration := 100 * time.Millisecond
 		key := "my-key"
 		value := &testpb.Hello{Name: key}
-		err := node2.Client().PutProto(ctx, key, value, expiration)
+		bytea, err := proto.Marshal(value)
+		require.NoError(t, err)
+		entry := &Entry{
+			Key:   key,
+			Value: bytea,
+		}
+
+		err = node2.Client().Put(ctx, entry, expiration)
 		require.NoError(t, err)
 
 		// wait for the key to be distributed in the cluster
@@ -144,9 +71,9 @@ func TestClient(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, exists)
 
-		actual := &testpb.Hello{}
-		err = node1.Client().GetProto(ctx, key, actual)
+		actual, err := node1.Client().Get(ctx, key)
 		require.Error(t, err)
+		require.Nil(t, actual)
 		assert.EqualError(t, err, ErrKeyNotFound.Error())
 
 		lib.Pause(time.Second)
@@ -158,56 +85,4 @@ func TestClient(t *testing.T) {
 			srv.Shutdown()
 		})
 	})
-	t.Run("With PutString GetString with expiration", func(t *testing.T) {
-		ctx := context.Background()
-		// start the NATS server
-		srv := startNatsServer(t)
-		// create a cluster node1
-		node1, sd1 := startNode(t, srv.Addr().String())
-		require.NotNil(t, node1)
-
-		// create a cluster node2
-		node2, sd2 := startNode(t, srv.Addr().String())
-		require.NotNil(t, node2)
-
-		key := "my-key"
-		value := "my-value"
-		expiration := 100 * time.Millisecond
-		err := node2.Client().PutString(ctx, key, value, expiration)
-		require.NoError(t, err)
-
-		// wait for the key to be distributed in the cluster
-		lib.Pause(time.Second)
-
-		// let us retrieve the key from the other nodes
-		exists, err := node1.Client().Exists(ctx, key)
-		require.NoError(t, err)
-		require.False(t, exists)
-
-		actual, err := node1.Client().GetString(ctx, key)
-		require.Error(t, err)
-		require.Empty(t, actual)
-		assert.EqualError(t, err, ErrKeyNotFound.Error())
-
-		lib.Pause(time.Second)
-		t.Cleanup(func() {
-			assert.NoError(t, node1.Stop(ctx))
-			assert.NoError(t, node2.Stop(ctx))
-			assert.NoError(t, sd1.Close())
-			assert.NoError(t, sd2.Close())
-			srv.Shutdown()
-		})
-	})
-}
-
-type testCodec struct{}
-
-func (c *testCodec) Encode(t interface{}) ([]byte, error) {
-	return json.Marshal(t)
-}
-
-func (c *testCodec) Decode(bytea []byte) (interface{}, error) {
-	var t interface{}
-	err := json.Unmarshal(bytea, &t)
-	return t, err
 }

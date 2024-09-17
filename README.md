@@ -1,7 +1,6 @@
 ## Go-KV
 
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Tochemey/gokv/build.yml)]((https://github.com/Tochemey/gokv/actions/workflows/build.yml))
-[![codecov](https://codecov.io/gh/Tochemey/gokv/graph/badge.svg?token=L9KEvLkm09)](https://codecov.io/gh/Tochemey/gokv)
 
 Simple Distributed in-memory key/value store. GoKV provides high availability and fault tolerance which makes it suitable large-scale applications system without sacrificing performance and reliability. 
 With GoKV, you can instantly create a fast, scalable, distributed system  across a cluster of computers. 
@@ -24,11 +23,8 @@ go get github.com/tochemey/gokv
     - [dns](./discovery/dnssd) is fully functional
 - Built-in [client](./cluster/client.go) to interact with the distributed store via the following apis:
     - `Put`: create key/value pair that is eventually distributed in the cluster of nodes. The `key` is a string and the `value` is a byte array.
-    - `PutProto`: to create a key/value pair where the value is a protocol buffer message
-    - `PutString`: to create a key/value pair where the value is a string
     - `Get`: retrieves the value of a given `key` from the cluster of nodes.
-    - `GetProto`: retrieves a protocol buffer message for a given `key`. This requires `PutProto` or `Put` to be used to set the value.
-    - `GetString`: retrieves a string value for a given `key`. This requires `PutString` or `Put` to be used to set the value.
+    - `List`: retrieves the list of key/value pairs in the cluster at a point in time
     - `Exists`: check the existence of a given `key` in the cluster.
     - `Delete`: delete a given `key` from the cluster. At the moment the `key` is marked to be `archived`.
 

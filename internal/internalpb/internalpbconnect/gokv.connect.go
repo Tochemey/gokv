@@ -41,6 +41,8 @@ const (
 	KVServiceDeleteProcedure = "/internalpb.KVService/Delete"
 	// KVServiceKeyExistsProcedure is the fully-qualified name of the KVService's KeyExists RPC.
 	KVServiceKeyExistsProcedure = "/internalpb.KVService/KeyExists"
+	// KVServiceListProcedure is the fully-qualified name of the KVService's List RPC.
+	KVServiceListProcedure = "/internalpb.KVService/List"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -50,6 +52,7 @@ var (
 	kVServiceGetMethodDescriptor       = kVServiceServiceDescriptor.Methods().ByName("Get")
 	kVServiceDeleteMethodDescriptor    = kVServiceServiceDescriptor.Methods().ByName("Delete")
 	kVServiceKeyExistsMethodDescriptor = kVServiceServiceDescriptor.Methods().ByName("KeyExists")
+	kVServiceListMethodDescriptor      = kVServiceServiceDescriptor.Methods().ByName("List")
 )
 
 // KVServiceClient is a client for the internalpb.KVService service.
@@ -62,6 +65,8 @@ type KVServiceClient interface {
 	Delete(context.Context, *connect.Request[internalpb.DeleteRequest]) (*connect.Response[internalpb.DeleteResponse], error)
 	// KeyExists is used to check the existence of a given key in the cluster
 	KeyExists(context.Context, *connect.Request[internalpb.KeyExistsRequest]) (*connect.Response[internalpb.KeyExistResponse], error)
+	// List returns the list of all entries at a given point in time
+	List(context.Context, *connect.Request[internalpb.ListRequest]) (*connect.Response[internalpb.ListResponse], error)
 }
 
 // NewKVServiceClient constructs a client for the internalpb.KVService service. By default, it uses
@@ -98,6 +103,12 @@ func NewKVServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...c
 			connect.WithSchema(kVServiceKeyExistsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		list: connect.NewClient[internalpb.ListRequest, internalpb.ListResponse](
+			httpClient,
+			baseURL+KVServiceListProcedure,
+			connect.WithSchema(kVServiceListMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -107,6 +118,7 @@ type kVServiceClient struct {
 	get       *connect.Client[internalpb.GetRequest, internalpb.GetResponse]
 	delete    *connect.Client[internalpb.DeleteRequest, internalpb.DeleteResponse]
 	keyExists *connect.Client[internalpb.KeyExistsRequest, internalpb.KeyExistResponse]
+	list      *connect.Client[internalpb.ListRequest, internalpb.ListResponse]
 }
 
 // Put calls internalpb.KVService.Put.
@@ -129,6 +141,11 @@ func (c *kVServiceClient) KeyExists(ctx context.Context, req *connect.Request[in
 	return c.keyExists.CallUnary(ctx, req)
 }
 
+// List calls internalpb.KVService.List.
+func (c *kVServiceClient) List(ctx context.Context, req *connect.Request[internalpb.ListRequest]) (*connect.Response[internalpb.ListResponse], error) {
+	return c.list.CallUnary(ctx, req)
+}
+
 // KVServiceHandler is an implementation of the internalpb.KVService service.
 type KVServiceHandler interface {
 	// Put is used to distribute a key/value pair across a cluster of nodes
@@ -139,6 +156,8 @@ type KVServiceHandler interface {
 	Delete(context.Context, *connect.Request[internalpb.DeleteRequest]) (*connect.Response[internalpb.DeleteResponse], error)
 	// KeyExists is used to check the existence of a given key in the cluster
 	KeyExists(context.Context, *connect.Request[internalpb.KeyExistsRequest]) (*connect.Response[internalpb.KeyExistResponse], error)
+	// List returns the list of all entries at a given point in time
+	List(context.Context, *connect.Request[internalpb.ListRequest]) (*connect.Response[internalpb.ListResponse], error)
 }
 
 // NewKVServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -171,6 +190,12 @@ func NewKVServiceHandler(svc KVServiceHandler, opts ...connect.HandlerOption) (s
 		connect.WithSchema(kVServiceKeyExistsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kVServiceListHandler := connect.NewUnaryHandler(
+		KVServiceListProcedure,
+		svc.List,
+		connect.WithSchema(kVServiceListMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/internalpb.KVService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case KVServicePutProcedure:
@@ -181,6 +206,8 @@ func NewKVServiceHandler(svc KVServiceHandler, opts ...connect.HandlerOption) (s
 			kVServiceDeleteHandler.ServeHTTP(w, r)
 		case KVServiceKeyExistsProcedure:
 			kVServiceKeyExistsHandler.ServeHTTP(w, r)
+		case KVServiceListProcedure:
+			kVServiceListHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -204,4 +231,8 @@ func (UnimplementedKVServiceHandler) Delete(context.Context, *connect.Request[in
 
 func (UnimplementedKVServiceHandler) KeyExists(context.Context, *connect.Request[internalpb.KeyExistsRequest]) (*connect.Response[internalpb.KeyExistResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("internalpb.KVService.KeyExists is not implemented"))
+}
+
+func (UnimplementedKVServiceHandler) List(context.Context, *connect.Request[internalpb.ListRequest]) (*connect.Response[internalpb.ListResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("internalpb.KVService.List is not implemented"))
 }

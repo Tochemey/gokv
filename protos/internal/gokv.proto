@@ -17,16 +17,20 @@ service KVService {
   rpc Delete(DeleteRequest) returns (DeleteResponse);
   // KeyExists is used to check the existence of a given key in the cluster
   rpc KeyExists(KeyExistsRequest) returns (KeyExistResponse);
+  // List returns the list of all entries at a given point in time
+  rpc List(ListRequest) returns (ListResponse);
 }
 
 // Entry represents the key/value pair
 message Entry {
+  // Specifies the key
+  string key = 1;
   // Specifies the value
-  bytes value = 1;
+  bytes value = 2;
   // States whether it is archived or not
   optional bool archived = 3;
-  // Specifies the timestamp
-  google.protobuf.Timestamp timestamp = 4;
+  // Specifies the timestamp which represents the last updated time
+  google.protobuf.Timestamp last_updated_time = 4;
   // Specifies the expiration
   google.protobuf.Duration expiry = 5;
 }
@@ -68,8 +72,8 @@ message GetRequest {
 
 // GetResponse is the response to GetRequest
 message GetResponse {
-  // Specifies the KV
-  bytes value = 1;
+  // Specifies the specifies
+  Entry entry = 1;
 }
 
 // PutRequest is used to distribute a given key/value
@@ -104,4 +108,14 @@ message KeyExistsRequest {
 message KeyExistResponse {
   // Specifies the status of the request
   bool exists = 1;
+}
+
+// ListRequest is used to return all entries
+// at a point in time
+message ListRequest {}
+
+// ListResponse is the response to the ListRequest
+message ListResponse {
+  // Specifies the list of entries
+  repeated Entry entries = 1;
 }

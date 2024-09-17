@@ -148,7 +148,7 @@ func (d *Delegate) MergeRemoteState(buf []byte, join bool) {
 
 			// 4. if the key entry exists then check its timestamp against the incoming entry
 			// 5. if the existing key entry is newer compared to the incoming entry ignore the incoming entry
-			if localEntry.GetTimestamp().AsTime().Unix() > remoteEntry.GetTimestamp().AsTime().Unix() {
+			if localEntry.GetLastUpdatedTime().AsTime().Unix() > remoteEntry.GetLastUpdatedTime().AsTime().Unix() {
 				continue
 			}
 
@@ -189,9 +189,10 @@ func (d *Delegate) Put(key string, value []byte, expiration time.Duration) {
 		for k := range nodeState.GetEntries() {
 			if k == key {
 				nodeState.Entries[k] = &internalpb.Entry{
-					Value:     value,
-					Timestamp: timestamp,
-					Expiry:    expiry,
+					Key:             key,
+					Value:           value,
+					LastUpdatedTime: timestamp,
+					Expiry:          expiry,
 				}
 				keyExists = true
 				break
@@ -212,18 +213,20 @@ func (d *Delegate) Put(key string, value []byte, expiration time.Duration) {
 			if len(nodeState.GetEntries()) == 0 {
 				nodeState.Entries = map[string]*internalpb.Entry{
 					key: {
-						Value:     value,
-						Timestamp: timestamp,
-						Expiry:    expiry,
+						Key:             key,
+						Value:           value,
+						LastUpdatedTime: timestamp,
+						Expiry:          expiry,
 					},
 				}
 				return
 			}
 
 			nodeState.GetEntries()[key] = &internalpb.Entry{
-				Value:     value,
-				Timestamp: timestamp,
-				Expiry:    expiry,
+				Key:             key,
+				Value:           value,
+				LastUpdatedTime: timestamp,
+				Expiry:          expiry,
 			}
 			return
 		}
@@ -231,7 +234,7 @@ func (d *Delegate) Put(key string, value []byte, expiration time.Duration) {
 }
 
 // Get returns the value of the given key
-func (d *Delegate) Get(key string) ([]byte, error) {
+func (d *Delegate) Get(key string) (*internalpb.Entry, error) {
 	d.RLock()
 	defer d.RUnlock()
 	localState := d.fsm
@@ -241,11 +244,27 @@ func (d *Delegate) Get(key string) ([]byte, error) {
 				if expired(entry) {
 					return nil, ErrKeyNotFound
 				}
-				return entry.GetValue(), nil
+				return entry, nil
 			}
 		}
 	}
 	return nil, ErrKeyNotFound
+}
+
+// List returns the list of entries
+func (d *Delegate) List() []*internalpb.Entry {
+	d.RLock()
+	defer d.RUnlock()
+	localState := d.fsm
+	var entries []*internalpb.Entry
+	for _, nodeState := range localState.GetNodeStates() {
+		for _, entry := range nodeState.GetEntries() {
+			if !expired(entry) {
+				entries = append(entries, entry)
+			}
+		}
+	}
+	return entries
 }
 
 // Delete deletes the given key from the cluster
@@ -258,7 +277,7 @@ func (d *Delegate) Delete(key string) {
 		for k := range nodeState.GetEntries() {
 			if k == key && nodeState.GetNodeId() == d.me {
 				nodeState.Entries[key].Archived = lib.Ptr(true)
-				nodeState.Entries[key].Timestamp = timestamppb.New(time.Now().UTC())
+				nodeState.Entries[key].LastUpdatedTime = timestamppb.New(time.Now().UTC())
 				d.fsm.NodeStates[index] = nodeState
 				return
 			}
@@ -306,7 +325,7 @@ func expired(entry *internalpb.Entry) bool {
 	if entry.GetExpiry() == nil {
 		return false
 	}
-	expiration := entry.GetTimestamp().AsTime().Unix()
+	expiration := entry.GetLastUpdatedTime().AsTime().Unix()
 	if expiration <= 0 {
 		return false
 	}
