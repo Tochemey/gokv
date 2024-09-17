@@ -133,7 +133,7 @@ func (d *Delegate) MergeRemoteState(buf []byte, join bool) {
 			localEntries = make(map[string]*internalpb.Entry)
 		}
 
-		/*******************************************************************************
+		/**********************************************************************************
 		small algorithm to merge incoming remote state entries with the local state entries
 		 ********************************************************************************/
 		// 1. iterate the incoming state entries
@@ -180,20 +180,18 @@ func (d *Delegate) Put(key string, value []byte, expiration time.Duration) {
 
 	localState := d.fsm
 	keyExists := false
-
-	timestamp := timestamppb.New(time.Now().UTC())
-	expiry := setExpiry(expiration)
+	entry := &internalpb.Entry{
+		Key:             key,
+		Value:           value,
+		LastUpdatedTime: timestamppb.New(time.Now().UTC()),
+		Expiry:          setExpiry(expiration),
+	}
 
 	// first check the key existence and overwrite when found
 	for _, nodeState := range localState.GetNodeStates() {
 		for k := range nodeState.GetEntries() {
 			if k == key {
-				nodeState.Entries[k] = &internalpb.Entry{
-					Key:             key,
-					Value:           value,
-					LastUpdatedTime: timestamp,
-					Expiry:          expiry,
-				}
+				nodeState.Entries[k] = entry
 				keyExists = true
 				break
 			}
@@ -212,22 +210,12 @@ func (d *Delegate) Put(key string, value []byte, expiration time.Duration) {
 		if nodeState.GetNodeId() == d.me {
 			if len(nodeState.GetEntries()) == 0 {
 				nodeState.Entries = map[string]*internalpb.Entry{
-					key: {
-						Key:             key,
-						Value:           value,
-						LastUpdatedTime: timestamp,
-						Expiry:          expiry,
-					},
+					key: entry,
 				}
 				return
 			}
 
-			nodeState.GetEntries()[key] = &internalpb.Entry{
-				Key:             key,
-				Value:           value,
-				LastUpdatedTime: timestamp,
-				Expiry:          expiry,
-			}
+			nodeState.GetEntries()[key] = entry
 			return
 		}
 	}
