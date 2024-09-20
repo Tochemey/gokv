@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/golang/protobuf/ptypes/duration"
 	"github.com/hashicorp/memberlist"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
@@ -321,7 +320,7 @@ func expired(entry *internalpb.Entry) bool {
 }
 
 // setExpiry sets the expiry time
-func setExpiry(expiration time.Duration) *duration.Duration {
+func setExpiry(expiration time.Duration) *durationpb.Duration {
 	var expiry *durationpb.Duration
 	if expiration > 0 {
 		expiry = durationpb.New(expiration)

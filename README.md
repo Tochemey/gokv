@@ -15,6 +15,7 @@ go get github.com/tochemey/gokv
 ## Design
 
 Go-KV is designed to distribute key/value pair in a cluster of computers using push-pull anti-entropy method to replicate nodes' state across the cluster.
+When a data entry is changed on a node the full state of that entry is replicated to other nodes.
 This approach makes Go-KV eventually consistent. However, at some point in time the cluster will be in complete synchronised state. For frequent state synchronisation
 one can set the [`stateSyncInterval`](./cluster/config.go) value to a low value. The downside of a low value is that it will increase network traffic.
 
