@@ -22,7 +22,13 @@ one can set the [`stateSyncInterval`](./cluster/config.go) value to a low value.
 ## Features
 - Built-in [client](./cluster/client.go) to interact with the cluster via the following apis:
   - `Put`: create key/value pair that is eventually distributed in the cluster of nodes. The `key` is a string and the `value` is a byte array. One can set an expiry to the key.
+  - `PutProto`: to create a key/value pair where the value is a protocol buffer message
+  - `PutString`: to create a key/value pair where the value is a string
+  - `PutAny`: to create a key/value pair with a given [`Codec`](./cluster/codec.go) to encode the value type.
   - `Get`: retrieves the value of a given `key` from the cluster of nodes. This can return a false negative meaning that the key may exist but at the time of checking it is having yet to be replicated in the cluster.
+  - `GetProto`: retrieves a protocol buffer message for a given `key`. This requires `PutProto` or `Put` to be used to set the value.
+  - `GetString`: retrieves a string value for a given `key`. This requires `PutString` or `Put` to be used to set the value.
+  - `GetAny`: retrieves any value type for a given `key`. This requires `PutAny` to be used to set the value.
   - `List`: retrieves the list of key/value pairs in the cluster at a point in time
   - `Exists`: check the existence of a given `key` in the cluster. This can return a false negative meaning that the key may exist but at the time of checking it is having yet to be replicated in the cluster.
   - `Delete`: delete a given `key` from the cluster. Node only deletes the key they own

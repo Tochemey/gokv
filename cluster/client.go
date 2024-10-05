@@ -31,6 +31,7 @@ import (
 
 	"connectrpc.com/connect"
 	"go.uber.org/atomic"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/tochemey/gokv/internal/http"
 	"github.com/tochemey/gokv/internal/internalpb"
@@ -61,6 +62,65 @@ func (client *Client) Put(ctx context.Context, entry *Entry, expiration time.Dur
 			Expiry: setExpiry(expiration),
 		}))
 	return err
+}
+
+// PutProto creates a key/value pair  where the value is a proto message and distributes in the cluster
+func (client *Client) PutProto(ctx context.Context, key string, value proto.Message, expiration time.Duration) error {
+	bytea, err := proto.Marshal(value)
+	if err != nil {
+		return err
+	}
+
+	entry := &Entry{Key: key, Value: bytea}
+	return client.Put(ctx, entry, expiration)
+}
+
+// PutString creates a key/value pair where the value is a string and distributes in the cluster
+func (client *Client) PutString(ctx context.Context, key string, value string, expiration time.Duration) error {
+	entry := &Entry{Key: key, Value: []byte(value)}
+	return client.Put(ctx, entry, expiration)
+}
+
+// PutAny distributes the key/value pair in the cluster.
+// A binary encoder is required to properly encode the value.
+func (client *Client) PutAny(ctx context.Context, key string, value any, expiration time.Duration, codec Codec) error {
+	bytea, err := codec.Encode(value)
+	if err != nil {
+		return err
+	}
+	entry := &Entry{Key: key, Value: bytea}
+	return client.Put(ctx, entry, expiration)
+}
+
+// GetProto retrieves the value of the given from the cluster as protocol buffer message
+// Prior to calling this method one must set a proto message as the value of the key
+func (client *Client) GetProto(ctx context.Context, key string, dst proto.Message) error {
+	entry, err := client.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+	return proto.Unmarshal(entry.Value, dst)
+}
+
+// GetString retrieves the value of the given from the cluster as a string
+// Prior to calling this method one must set a string as the value of the key
+func (client *Client) GetString(ctx context.Context, key string) (string, error) {
+	entry, err := client.Get(ctx, key)
+	if err != nil {
+		return "", err
+	}
+
+	return string(entry.Value), nil
+}
+
+// GetAny retrieves the value of the given from the cluster
+// Prior to calling this method one must set a string as the value of the key
+func (client *Client) GetAny(ctx context.Context, key string, codec Codec) (any, error) {
+	entry, err := client.Get(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	return codec.Decode(entry.Value)
 }
 
 // Get retrieves the value of the given key from the cluster
