@@ -44,10 +44,11 @@ message NodeState {
   map<string, Entry> entries = 2;
 }
 
-// FSM defines the delegate FSM
-message FSM {
-  // Specifies the list of node states
-  repeated NodeState node_states = 1;
+// PeersState defines the remote nodes
+// state that will be handled by the various peers
+message PeersState {
+  // Specifies the peer states
+  map<string, NodeState> remote_states = 1;
 }
 
 // NodeMeta defines the node metadata

@@ -21,11 +21,12 @@ one can set the [`stateSyncInterval`](./cluster/config.go) value to a low value.
 
 ## Features
 - Built-in [client](./cluster/client.go) to interact with the cluster via the following apis:
-  - `Put`: create key/value pair that is eventually distributed in the cluster of nodes. The `key` is a string and the `value` is a byte array.
-  - `Get`: retrieves the value of a given `key` from the cluster of nodes.
+  - `Put`: create key/value pair that is eventually distributed in the cluster of nodes. The `key` is a string and the `value` is a byte array. One can set an expiry to the key.
+  - `Get`: retrieves the value of a given `key` from the cluster of nodes. This can return a false negative meaning that the key may exist but at the time of checking it is having yet to be replicated in the cluster.
   - `List`: retrieves the list of key/value pairs in the cluster at a point in time
-  - `Exists`: check the existence of a given `key` in the cluster.
-  - `Delete`: delete a given `key` from the cluster. At the moment the `key` is marked to be `archived`.
+  - `Exists`: check the existence of a given `key` in the cluster. This can return a false negative meaning that the key may exist but at the time of checking it is having yet to be replicated in the cluster.
+  - `Delete`: delete a given `key` from the cluster. Node only deletes the key they own
+- Built-in janitor to remove expired entries. One can set the janitor execution interval. Bearing in mind of the eventual consistency of the Go-KV, one need to set that interval taking into consideration the [`stateSyncInterval`](./cluster/config.go)
 - Discovery API to implement custom nodes discovery provider. See: [discovery](./discovery/provider.go)
 - Comes bundled with some discovery providers that can help you hit the ground running:
     - [kubernetes](https://kubernetes.io/docs/home/) [api integration](./discovery/kubernetes) is fully functional

@@ -90,7 +90,7 @@ func TestNodes(t *testing.T) {
 	require.NoError(t, node2.Client().Delete(ctx, key))
 
 	// wait a bit for consistency
-	lib.Pause(time.Second)
+	lib.Pause(2 * time.Second)
 
 	exists, err = node3.Client().Exists(ctx, key)
 	require.NoError(t, err)

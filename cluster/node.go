@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"net"
 	nethttp "net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -61,7 +62,7 @@ type Node struct {
 
 	// delegate holds the node delegate
 	// through memberlist this delegate will be eventually gossiped to the rest of the cluster
-	delegate *Delegate
+	delegate *NodeFSM
 
 	memberConfig *memberlist.Config
 	memberlist   *memberlist.Memberlist
@@ -78,6 +79,7 @@ type Node struct {
 	eventsLock         *sync.Mutex
 
 	discoveryAddress string
+	cleaner          *cleaner
 }
 
 // NewNode creates an instance of Node
@@ -99,10 +101,10 @@ func NewNode(config *Config) *Node {
 	}
 
 	discoveryAddr := lib.HostPort(config.host, int(config.discoveryPort))
-	delegate := newDelegate(discoveryAddr, meta)
+	delegate := nodeFSM(discoveryAddr, meta)
 	mconfig.Delegate = delegate
 
-	return &Node{
+	node := &Node{
 		mu:                 new(sync.Mutex),
 		delegate:           delegate,
 		memberConfig:       mconfig,
@@ -113,6 +115,13 @@ func NewNode(config *Config) *Node {
 		config:             config,
 		discoveryAddress:   discoveryAddr,
 	}
+
+	if config.cleanerJobInterval > 0 {
+		runCleaner(node, config.cleanerJobInterval)
+		runtime.SetFinalizer(node, stopCleaner)
+	}
+
+	return node
 }
 
 // Start starts the cluster node

@@ -22,41 +22,42 @@
  * SOFTWARE.
  */
 
-package lib
+package cluster
 
-import (
-	"fmt"
-	"net"
-	"strconv"
-	"time"
+import "time"
 
-	"github.com/tochemey/gokv/internal/types"
-)
-
-// Pause pauses the running process for some time period
-func Pause(duration time.Duration) {
-	stopCh := make(chan types.Unit, 1)
-	timer := time.AfterFunc(duration, func() {
-		stopCh <- types.Unit{}
-	})
-	<-stopCh
-	timer.Stop()
+// cleaner runs periodically to remove expired entries
+// from the localState of the given node
+type cleaner struct {
+	interval time.Duration
+	stop     chan bool
 }
 
-// HostPort returns the combination of host:port
-func HostPort(host string, port int) string {
-	return net.JoinHostPort(host, strconv.Itoa(port))
-}
-
-// Ptr creates a pointer of a primitive
-func Ptr[T any](v T) *T {
-	return &v
-}
-
-// MapKeyExists return an error when the given key is not found in the map
-func MapKeyExists(m map[string]any, key string) error {
-	if _, ok := m[key]; ok {
-		return nil
+// run kick-starts the cleaner job
+func (cl *cleaner) run(node *Node) {
+	ticker := time.NewTicker(cl.interval)
+	for {
+		select {
+		case <-ticker.C:
+			node.delegate.removeExpired()
+		case <-cl.stop:
+			ticker.Stop()
+			return
+		}
 	}
-	return fmt.Errorf("key %s does not exist", key)
+}
+
+// stopCleaner stops the cleaner job
+func stopCleaner(c *Node) {
+	c.cleaner.stop <- true
+}
+
+// runCleaner runs the cleaner job
+func runCleaner(c *Node, ci time.Duration) {
+	j := &cleaner{
+		interval: ci,
+		stop:     make(chan bool),
+	}
+	c.cleaner = j
+	go j.run(c)
 }

@@ -62,7 +62,8 @@ type Config struct {
 	// speeds across larger clusters at the expense of increased bandwidth usage.
 	stateSyncInterval time.Duration
 
-	readTimeout time.Duration
+	cleanerJobInterval time.Duration
+	readTimeout        time.Duration
 }
 
 // enforce compilation error
@@ -140,6 +141,13 @@ func (config *Config) WithStateSyncInterval(interval time.Duration) *Config {
 // This timeout specifies the timeout of a data retrieval
 func (config *Config) WithReadTimeout(timeout time.Duration) *Config {
 	config.readTimeout = timeout
+	return config
+}
+
+// WithCleanerJobInterval sets the Node cleaning job interval
+// This helps remove expired entries on the localState of the given node
+func (config *Config) WithCleanerJobInterval(interval time.Duration) *Config {
+	config.cleanerJobInterval = interval
 	return config
 }
 
