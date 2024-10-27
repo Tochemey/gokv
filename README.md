@@ -17,7 +17,7 @@ go get github.com/tochemey/gokv
 Go-KV is designed to distribute key/value pair in a cluster of computers using push-pull anti-entropy method to replicate nodes' state across the cluster.
 When a data entry is changed on a node the full state of that entry is replicated to other nodes.
 This approach makes Go-KV eventually consistent. However, at some point in time the cluster will be in complete synchronised state. For frequent state synchronisation
-one can set the [`stateSyncInterval`](./cluster/config.go) value to a low value. The downside of a low value is that it will increase network traffic.
+one can set the [`syncInterval`](./cluster/config.go) value to a low value. The downside of a low value is that it will increase network traffic.
 
 ## Features
 - Built-in [client](./cluster/client.go) to interact with the cluster via the following apis:
@@ -32,7 +32,7 @@ one can set the [`stateSyncInterval`](./cluster/config.go) value to a low value.
   - `List`: retrieves the list of key/value pairs in the cluster at a point in time
   - `Exists`: check the existence of a given `key` in the cluster. This can return a false negative meaning that the key may exist but at the time of checking it is having yet to be replicated in the cluster.
   - `Delete`: delete a given `key` from the cluster. Node only deletes the key they own
-- Built-in janitor to remove expired entries. One can set the janitor execution interval. Bearing in mind of the eventual consistency of the Go-KV, one need to set that interval taking into consideration the [`stateSyncInterval`](./cluster/config.go)
+- Built-in janitor to remove expired entries. One can set the janitor execution interval. Bearing in mind of the eventual consistency of the Go-KV, one need to set that interval taking into consideration the [`syncInterval`](./cluster/config.go)
 - Discovery API to implement custom nodes discovery provider. See: [discovery](./discovery/provider.go)
 - Comes bundled with some discovery providers that can help you hit the ground running:
     - [kubernetes](https://kubernetes.io/docs/home/) [api integration](./discovery/kubernetes) is fully functional

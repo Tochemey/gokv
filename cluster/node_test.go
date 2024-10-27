@@ -216,7 +216,7 @@ func startNatsServer(t *testing.T) *natsserver.Server {
 
 func startNode(t *testing.T, serverAddr string) (*Node, discovery.Provider) {
 	ctx := context.TODO()
-	logger := log.DiscardLogger
+	logger := log.DefaultLogger
 
 	// generate the ports for the single startNode
 	nodePorts := dynaport.Get(2)
@@ -227,6 +227,8 @@ func startNode(t *testing.T, serverAddr string) (*Node, discovery.Provider) {
 	host := "127.0.0.1"
 	// create the various config option
 	natsSubject := "some-subject"
+	cookie := "cookie"
+	secretKey := []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 	// create the config
 	config := nats.Config{
 		Server:        fmt.Sprintf("nats://%s", serverAddr),
@@ -245,9 +247,10 @@ func startNode(t *testing.T, serverAddr string) (*Node, discovery.Provider) {
 		shutdownTimeout:   time.Second,
 		logger:            logger,
 		host:              host,
-		stateSyncInterval: 500 * time.Millisecond,
+		syncInterval:      500 * time.Millisecond,
 		joinRetryInterval: 500 * time.Millisecond,
 		maxJoinAttempts:   5,
+		security:          NewSecurity(cookie, secretKey),
 	})
 
 	// start the node

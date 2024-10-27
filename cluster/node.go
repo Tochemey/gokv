@@ -90,7 +90,14 @@ func NewNode(config *Config) *Node {
 	mconfig.AdvertisePort = mconfig.BindPort
 	mconfig.LogOutput = newLogWriter(config.logger)
 	mconfig.Name = net.JoinHostPort(mconfig.BindAddr, strconv.Itoa(mconfig.BindPort))
-	mconfig.PushPullInterval = config.stateSyncInterval
+	mconfig.PushPullInterval = config.syncInterval
+
+	if config.security != nil {
+		mconfig.Label = config.security.cookie
+		mconfig.SecretKey = config.security.encryptionKey
+		mconfig.GossipVerifyIncoming = true
+		mconfig.GossipVerifyOutgoing = true
+	}
 
 	meta := &internalpb.NodeMeta{
 		Name:          mconfig.Name,
