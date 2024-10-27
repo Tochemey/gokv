@@ -60,10 +60,14 @@ type Config struct {
 	// quite expensive relative to standard gossiped messages.
 	// Setting this interval lower (more frequent) will increase convergence
 	// speeds across larger clusters at the expense of increased bandwidth usage.
-	stateSyncInterval time.Duration
-
+	syncInterval time.Duration
+	// specifies the interval at which deleted or dead keys will be completely removed from the system
 	cleanerJobInterval time.Duration
-	readTimeout        time.Duration
+	// specifies the read timeout. This is how long to wait before timing out when reading
+	// a given key
+	readTimeout time.Duration
+	// security specifies whether to encrypt the data
+	security *Security
 }
 
 // enforce compilation error
@@ -77,7 +81,7 @@ func NewConfig() *Config {
 		maxJoinAttempts:   5,
 		joinRetryInterval: time.Second,
 		shutdownTimeout:   3 * time.Second,
-		stateSyncInterval: time.Minute,
+		syncInterval:      time.Minute,
 		logger:            log.New(log.ErrorLevel, os.Stderr),
 		readTimeout:       time.Second,
 	}
@@ -131,9 +135,9 @@ func (config *Config) WithHost(host string) *Config {
 	return config
 }
 
-// WithStateSyncInterval sets the delegate sync interval
-func (config *Config) WithStateSyncInterval(interval time.Duration) *Config {
-	config.stateSyncInterval = interval
+// WithSyncInterval sets the delegate sync interval
+func (config *Config) WithSyncInterval(interval time.Duration) *Config {
+	config.syncInterval = interval
 	return config
 }
 
@@ -151,6 +155,12 @@ func (config *Config) WithCleanerJobInterval(interval time.Duration) *Config {
 	return config
 }
 
+// WithSecurity sets the security of the config
+func (config *Config) WithSecurity(security *Security) *Config {
+	config.security = security
+	return config
+}
+
 // Validate implements validation.Validator.
 func (config *Config) Validate() error {
 	return validation.
@@ -159,7 +169,8 @@ func (config *Config) Validate() error {
 		AddAssertion(config.joinRetryInterval > 0, "join retry interval is invalid").
 		AddAssertion(config.shutdownTimeout > 0, "shutdown timeout is invalid").
 		AddAssertion(config.maxJoinAttempts > 0, "max join attempts is invalid").
-		AddAssertion(config.stateSyncInterval > 0, "stateSync interval is invalid").
+		AddAssertion(config.syncInterval > 0, "stateSync interval is invalid").
 		AddValidator(validation.NewEmptyStringValidator("host", config.host)).
+		AddValidator(validation.NewConditionalValidator(config.security != nil, config.security)).
 		Validate()
 }

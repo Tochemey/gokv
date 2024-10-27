@@ -79,7 +79,7 @@ func main() {
 		WithDiscoveryPort(discoveryPort).
 		WithDiscoveryProvider(discovery).
 		WithHost(host).
-		WithStateSyncInterval(time.Second).
+		WithSyncInterval(time.Second).
 		WithLogger(logger)
 
 	// create an instance of a node

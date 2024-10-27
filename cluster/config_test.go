@@ -41,7 +41,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryPort(1235).
 			WithDiscoveryProvider(discovery).
 			WithHost("127.0.0.1").
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithLogger(log.DiscardLogger).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(time.Second).
@@ -55,7 +55,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryPort(1235).
 			WithDiscoveryProvider(discovery).
 			WithHost(""). // host not provided will return an error
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithLogger(log.DiscardLogger).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(time.Second).
@@ -69,7 +69,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryPort(1235).
 			WithDiscoveryProvider(discovery).
 			WithHost(""). // host not provided will return an error
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithLogger(log.DiscardLogger).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(time.Second).
@@ -83,7 +83,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryPort(1235).
 			WithDiscoveryProvider(discovery).
 			WithHost(""). // host not provided will return an error
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithLogger(log.DiscardLogger).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(time.Second).
@@ -97,7 +97,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryPort(1235).
 			WithDiscoveryProvider(discovery).
 			WithHost(""). // host not provided will return an error
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithLogger(log.DiscardLogger).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(time.Second).
@@ -111,7 +111,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryPort(1235).
 			WithDiscoveryProvider(discovery).
 			WithHost("").
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithLogger(log.DiscardLogger).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(time.Second).
@@ -127,7 +127,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryPort(1235).
 			WithDiscoveryProvider(nil).
 			WithHost("127.0.0.1").
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithLogger(log.DiscardLogger).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(time.Second).
@@ -144,7 +144,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryProvider(discovery).
 			WithHost("127.0.0.1").
 			WithLogger(log.DiscardLogger).
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithJoinRetryInterval(-1).
 			WithShutdownTimeout(time.Second).
 			WithReadTimeout(time.Second)
@@ -160,7 +160,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryProvider(discovery).
 			WithHost("127.0.0.1").
 			WithLogger(log.DiscardLogger).
-			WithStateSyncInterval(-1).
+			WithSyncInterval(-1).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(time.Second).
 			WithReadTimeout(time.Second)
@@ -176,7 +176,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryProvider(discovery).
 			WithHost("127.0.0.1").
 			WithLogger(log.DiscardLogger).
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(-1).
 			WithReadTimeout(time.Second)
@@ -192,7 +192,7 @@ func TestConfig(t *testing.T) {
 			WithDiscoveryProvider(discovery).
 			WithHost("127.0.0.1").
 			WithLogger(log.DiscardLogger).
-			WithStateSyncInterval(time.Second).
+			WithSyncInterval(time.Second).
 			WithJoinRetryInterval(time.Second).
 			WithShutdownTimeout(time.Second).
 			WithMaxJoinAttempts(-1).
