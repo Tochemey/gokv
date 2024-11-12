@@ -33,7 +33,9 @@ one can set the [`syncInterval`](./cluster/config.go) value to a low value. The 
   - `Exists`: check the existence of a given `key` in the cluster. This can return a false negative meaning that the key may exist but at the time of checking it is having yet to be replicated in the cluster.
   - `Delete`: delete a given `key` from the cluster. Node only deletes the key they own
 - Built-in janitor to remove expired entries. One can set the janitor execution interval. Bearing in mind of the eventual consistency of the Go-KV, one need to set that interval taking into consideration the [`syncInterval`](./cluster/config.go)
-- Discovery API to implement custom nodes discovery provider. See: [discovery](./discovery/provider.go)
+- Discovery API to implement custom nodes discovery provider. See: [Discovery](./discovery/provider.go)
+- Data encryption using the `cookie` and the set of `secrets` via the [Config](./config.go)
+- Configuration can be customized. See [Config](./config.go)
 - Comes bundled with some discovery providers that can help you hit the ground running:
     - [kubernetes](https://kubernetes.io/docs/home/) [api integration](./discovery/kubernetes) is fully functional
     - [nats](https://nats.io/) [integration](./discovery/nats) is fully functional

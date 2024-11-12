@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,6 @@ import (
 	"github.com/travisjeffery/go-dynaport"
 
 	"github.com/tochemey/gokv"
-	"github.com/tochemey/gokv/cluster"
 	"github.com/tochemey/gokv/discovery/nats"
 	"github.com/tochemey/gokv/internal/lib"
 	"github.com/tochemey/gokv/log"
@@ -74,7 +73,7 @@ func main() {
 	discovery := nats.NewDiscovery(config)
 
 	// create an instance of the cluster config
-	clusterConfig := cluster.NewConfig().
+	clusterConfig := gokv.NewConfig().
 		WithPort(clientPort).
 		WithDiscoveryPort(discoveryPort).
 		WithDiscoveryProvider(discovery).
@@ -101,7 +100,7 @@ func main() {
 
 	// let us distribute the key in the cluster. At the moment we only have one node
 	// Put will override an existing key in the cluster
-	if err := client.Put(ctx, &cluster.Entry{Key: key, Value: value}, cluster.NoExpiration); err != nil {
+	if err := client.Put(ctx, &gokv.Entry{Key: key, Value: value}, gokv.NoExpiration); err != nil {
 		logger.Fatal(err)
 	}
 

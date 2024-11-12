@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,12 +27,10 @@ package gokv
 import (
 	"errors"
 	"fmt"
-
-	"github.com/tochemey/gokv/cluster"
 )
 
 // NewNode creates a distributed key/value store cluster node
-func NewNode(config *cluster.Config) (*cluster.Node, error) {
+func NewNode(config *Config) (*Node, error) {
 	if config == nil {
 		return nil, errors.New("node configuration is required")
 	}
@@ -41,5 +39,5 @@ func NewNode(config *cluster.Config) (*cluster.Node, error) {
 		return nil, fmt.Errorf("invalid node configuration: %w", err)
 	}
 
-	return cluster.NewNode(config), nil
+	return newNode(config)
 }

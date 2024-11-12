@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,11 @@
  * SOFTWARE.
  */
 
-package cluster
+package gokv
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"reflect"
 	"testing"
@@ -229,6 +230,7 @@ func startNode(t *testing.T, serverAddr string) (*Node, discovery.Provider) {
 	natsSubject := "some-subject"
 	cookie := "cookie"
 	secretKey := []byte{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	b64 := base64.StdEncoding.EncodeToString(secretKey)
 	// create the config
 	config := nats.Config{
 		Server:        fmt.Sprintf("nats://%s", serverAddr),
@@ -240,7 +242,7 @@ func startNode(t *testing.T, serverAddr string) (*Node, discovery.Provider) {
 	// create the instance of provider
 	provider := nats.NewDiscovery(&config, nats.WithLogger(logger))
 
-	node := NewNode(&Config{
+	node, _ := newNode(&Config{
 		provider:          provider,
 		port:              uint16(clientPort),
 		discoveryPort:     uint16(gossipPort),
@@ -250,7 +252,8 @@ func startNode(t *testing.T, serverAddr string) (*Node, discovery.Provider) {
 		syncInterval:      500 * time.Millisecond,
 		joinRetryInterval: 500 * time.Millisecond,
 		maxJoinAttempts:   5,
-		security:          NewSecurity(cookie, secretKey),
+		cookie:            cookie,
+		secretKeys:        []string{b64},
 	})
 
 	// start the node

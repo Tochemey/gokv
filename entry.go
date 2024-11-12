@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,12 +22,21 @@
  * SOFTWARE.
  */
 
-package cluster
+package gokv
 
-// Codec will be implemented to encode and decode message
-type Codec interface {
-	// Encode encodes the receiver into a binary form and returns the result.
-	Encode(any) ([]byte, error)
-	// Decode decodes a binary message
-	Decode([]byte) (any, error)
+import "github.com/tochemey/gokv/internal/internalpb"
+
+// Entry represents the key/value pair
+type Entry struct {
+	// Key represents the key
+	Key string
+	// Value represents the value
+	Value []byte
+}
+
+func fromNode(entry *internalpb.Entry) *Entry {
+	return &Entry{
+		Key:   entry.Key,
+		Value: entry.Value,
+	}
 }

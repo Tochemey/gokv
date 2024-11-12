@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,44 +22,12 @@
  * SOFTWARE.
  */
 
-package cluster
+package gokv
 
-import (
-	"net"
-	"strconv"
-	"time"
-
-	"google.golang.org/protobuf/proto"
-
-	"github.com/tochemey/gokv/internal/internalpb"
-)
-
-// Member specifies the cluster member
-type Member struct {
-	Name          string
-	Host          string
-	Port          uint16
-	DiscoveryPort uint16
-	CreatedAt     time.Time
-}
-
-// DiscoveryAddress returns the member discoveryAddress
-func (m *Member) DiscoveryAddress() string {
-	return net.JoinHostPort(m.Host, strconv.Itoa(int(m.DiscoveryPort)))
-}
-
-// MemberFromMeta returns a Member record from
-// a node metadata
-func MemberFromMeta(meta []byte) (*Member, error) {
-	nodeMeta := new(internalpb.NodeMeta)
-	if err := proto.Unmarshal(meta, nodeMeta); err != nil {
-		return nil, err
-	}
-	return &Member{
-		Name:          nodeMeta.GetName(),
-		Host:          nodeMeta.GetHost(),
-		Port:          uint16(nodeMeta.GetPort()),
-		DiscoveryPort: uint16(nodeMeta.GetDiscoveryPort()),
-		CreatedAt:     nodeMeta.GetCreationTime().AsTime(),
-	}, nil
+// Codec will be implemented to encode and decode message
+type Codec interface {
+	// Encode encodes the receiver into a binary form and returns the result.
+	Encode(any) ([]byte, error)
+	// Decode decodes a binary message
+	Decode([]byte) (any, error)
 }

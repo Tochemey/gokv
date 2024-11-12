@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,11 @@
  * SOFTWARE.
  */
 
-package cluster
+package gokv
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"net"
@@ -62,7 +63,7 @@ type Node struct {
 
 	// delegate holds the node delegate
 	// through memberlist this delegate will be eventually gossiped to the rest of the cluster
-	delegate *NodeFSM
+	delegate *delegate
 
 	memberConfig *memberlist.Config
 	memberlist   *memberlist.Memberlist
@@ -82,8 +83,8 @@ type Node struct {
 	cleaner          *cleaner
 }
 
-// NewNode creates an instance of Node
-func NewNode(config *Config) *Node {
+// newNode creates an instance of Node
+func newNode(config *Config) (*Node, error) {
 	mconfig := memberlist.DefaultLANConfig()
 	mconfig.BindAddr = config.host
 	mconfig.BindPort = int(config.discoveryPort)
@@ -92,11 +93,27 @@ func NewNode(config *Config) *Node {
 	mconfig.Name = net.JoinHostPort(mconfig.BindAddr, strconv.Itoa(mconfig.BindPort))
 	mconfig.PushPullInterval = config.syncInterval
 
-	if config.security != nil {
-		mconfig.Label = config.security.cookie
-		mconfig.SecretKey = config.security.encryptionKey
+	// Enable gossip encryption if a key is defined.
+	if len(config.secretKeys) != 0 {
+		mconfig.Label = config.cookie
 		mconfig.GossipVerifyIncoming = true
 		mconfig.GossipVerifyOutgoing = true
+		mconfig.Keyring = &memberlist.Keyring{}
+		for i, key := range config.secretKeys {
+			secret, err := base64.StdEncoding.DecodeString(strings.TrimSpace(key))
+			if err != nil {
+				return nil, fmt.Errorf("unable to base64 decode memberlist encryption key at index %d: %w", i, err)
+			}
+
+			if err = mconfig.Keyring.AddKey(secret); err != nil {
+				return nil, fmt.Errorf("error adding memberlist encryption key at index %d: %w", i, err)
+			}
+
+			// set the first key as the default for encrypting outbound messages.
+			if i == 0 {
+				mconfig.SecretKey = secret
+			}
+		}
 	}
 
 	meta := &internalpb.NodeMeta{
@@ -108,7 +125,7 @@ func NewNode(config *Config) *Node {
 	}
 
 	discoveryAddr := lib.HostPort(config.host, int(config.discoveryPort))
-	delegate := nodeFSM(discoveryAddr, meta)
+	delegate := newDelegate(discoveryAddr, meta)
 	mconfig.Delegate = delegate
 
 	node := &Node{
@@ -128,7 +145,7 @@ func NewNode(config *Config) *Node {
 		runtime.SetFinalizer(node, stopCleaner)
 	}
 
-	return node
+	return node, nil
 }
 
 // Start starts the cluster node
@@ -311,7 +328,7 @@ func (node *Node) Peers() ([]*Member, error) {
 	node.mu.Unlock()
 	members := make([]*Member, 0, len(mnodes))
 	for _, mnode := range mnodes {
-		member, err := MemberFromMeta(mnode.Meta)
+		member, err := memberFromMeta(mnode.Meta)
 		if err != nil {
 			return nil, err
 		}
@@ -406,7 +423,7 @@ func (node *Node) eventsListener(eventsCh chan memberlist.NodeEvent) {
 			}
 
 			// parse the node meta information, log an eventual error during parsing and skip the event
-			member, err := MemberFromMeta(event.Node.Meta)
+			member, err := memberFromMeta(event.Node.Meta)
 			if err != nil {
 				node.config.logger.Errorf("failed to marshal node meta from cluster event: %v", err)
 				continue

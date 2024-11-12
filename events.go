@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,37 @@
  * SOFTWARE.
  */
 
-package cluster
+package gokv
 
-import "errors"
-
-var (
-	// ErrNodeNotStarted is returned when the cluster has not started
-	ErrNodeNotStarted = errors.New("cluster node not started")
-	// ErrKeyNotFound is return when the given key value is not found in the cluster
-	ErrKeyNotFound        = errors.New("key not found")
-	ErrClientNotConnected = errors.New("cluster client not connected")
+import (
+	"fmt"
+	"time"
 )
+
+type EventType int
+
+const (
+	NodeJoined EventType = iota
+	NodeLeft
+	NodeDead
+)
+
+func (et EventType) String() string {
+	switch et {
+	case NodeJoined:
+		return "NodeJoined"
+	case NodeLeft:
+		return "NodeLeft"
+	case NodeDead:
+		return "NodeDead"
+	default:
+		return fmt.Sprintf("%d", int(et))
+	}
+}
+
+// Event defines the cluster event
+type Event struct {
+	Member *Member
+	Time   time.Time
+	Type   EventType
+}

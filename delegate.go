@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package cluster
+package gokv
 
 import (
 	"sync"
@@ -36,9 +36,9 @@ import (
 	"github.com/tochemey/gokv/internal/internalpb"
 )
 
-// NodeFSM defines the given node finite state machine
+// delegate defines the given node finite state machine
 // in the cluster
-type NodeFSM struct {
+type delegate struct {
 	sync.RWMutex
 	self string
 
@@ -61,13 +61,13 @@ type NodeFSM struct {
 }
 
 // enforce compilation error
-var _ memberlist.Delegate = (*NodeFSM)(nil)
+var _ memberlist.Delegate = (*delegate)(nil)
 
 // NodeMeta is used to retrieve meta-data about the current node
 // when broadcasting an alive message. It's length is limited to
 // the given byte size. This metadata is available in the Node structure.
 // nolint
-func (fsm *NodeFSM) NodeMeta(limit int) []byte {
+func (fsm *delegate) NodeMeta(limit int) []byte {
 	fsm.Lock()
 	// no need to check the error
 	bytea, _ := proto.Marshal(fsm.nodeMeta)
@@ -80,7 +80,7 @@ func (fsm *NodeFSM) NodeMeta(limit int) []byte {
 // so would block the entire UDP packet receive loop. Additionally, the byte
 // slice may be modified after the call returns, so it should be copied if needed
 // nolint
-func (fsm *NodeFSM) NotifyMsg(bytes []byte) {}
+func (fsm *delegate) NotifyMsg(bytes []byte) {}
 
 // GetBroadcasts is called when user data messages can be broadcast.
 // It can return a list of buffers to send. Each buffer should assume an
@@ -89,7 +89,7 @@ func (fsm *NodeFSM) NotifyMsg(bytes []byte) {}
 // the limit. Care should be taken that this method does not block,
 // since doing so would block the entire UDP packet receive loop.
 // nolint
-func (fsm *NodeFSM) GetBroadcasts(overhead, limit int) [][]byte {
+func (fsm *delegate) GetBroadcasts(overhead, limit int) [][]byte {
 	return nil
 }
 
@@ -98,7 +98,7 @@ func (fsm *NodeFSM) GetBroadcasts(overhead, limit int) [][]byte {
 // data can be sent here. See MergeRemoteState as well. The `join`
 // boolean indicates this is for a join instead of a push/pull.
 // nolint
-func (fsm *NodeFSM) LocalState(join bool) []byte {
+func (fsm *delegate) LocalState(join bool) []byte {
 	fsm.Lock()
 	bytea, _ := proto.Marshal(fsm.localState)
 	fsm.Unlock()
@@ -110,7 +110,7 @@ func (fsm *NodeFSM) LocalState(join bool) []byte {
 // remote side's LocalState call. The 'join'
 // boolean indicates this is for a join instead of a push/pull.
 // nolint
-func (fsm *NodeFSM) MergeRemoteState(buf []byte, join bool) {
+func (fsm *delegate) MergeRemoteState(buf []byte, join bool) {
 	fsm.Lock()
 	incomingState := new(internalpb.NodeState)
 	_ = proto.Unmarshal(buf, incomingState)
@@ -122,7 +122,7 @@ func (fsm *NodeFSM) MergeRemoteState(buf []byte, join bool) {
 }
 
 // Put adds the key/value to the node local state
-func (fsm *NodeFSM) Put(key string, value []byte, expiration time.Duration) {
+func (fsm *delegate) Put(key string, value []byte, expiration time.Duration) {
 	fsm.Lock()
 	localState := fsm.localState
 	newEntry := &internalpb.Entry{
@@ -138,7 +138,7 @@ func (fsm *NodeFSM) Put(key string, value []byte, expiration time.Duration) {
 // Get returns the value of the given key
 // This can return a false negative meaning that the key may exist but at the time of checking it
 // is having yet to be replicated in the cluster
-func (fsm *NodeFSM) Get(key string) (*internalpb.Entry, error) {
+func (fsm *delegate) Get(key string) (*internalpb.Entry, error) {
 	fsm.RLock()
 	localState := fsm.localState
 
@@ -169,7 +169,7 @@ func (fsm *NodeFSM) Get(key string) (*internalpb.Entry, error) {
 
 // Delete deletes the given key from the cluster
 // One can only delete a key if the given node is the owner
-func (fsm *NodeFSM) Delete(key string) {
+func (fsm *delegate) Delete(key string) {
 	fsm.Lock()
 	localState := fsm.localState
 	if _, exists := localState.GetEntries()[key]; exists {
@@ -183,7 +183,7 @@ func (fsm *NodeFSM) Delete(key string) {
 // Exists checks whether a given exists
 // This can return a false negative meaning that the key may exist but at the time of checking it
 // is having yet to be replicated in the cluster
-func (fsm *NodeFSM) Exists(key string) bool {
+func (fsm *delegate) Exists(key string) bool {
 	fsm.RLock()
 	localState := fsm.localState
 
@@ -209,7 +209,7 @@ func (fsm *NodeFSM) Exists(key string) bool {
 // List returns the list of entries in the cluster
 // It returns a combined list of entries in the given node and its peers
 // at a given point in time.
-func (fsm *NodeFSM) List() []*internalpb.Entry {
+func (fsm *delegate) List() []*internalpb.Entry {
 	fsm.RLock()
 	localState := fsm.localState
 	var entries []*internalpb.Entry
@@ -233,7 +233,7 @@ func (fsm *NodeFSM) List() []*internalpb.Entry {
 }
 
 // removeExpired removes all entries that are expired
-func (fsm *NodeFSM) removeExpired() {
+func (fsm *delegate) removeExpired() {
 	fsm.Lock()
 	localState := fsm.localState
 	for key, entry := range localState.GetEntries() {
@@ -244,9 +244,9 @@ func (fsm *NodeFSM) removeExpired() {
 	fsm.Unlock()
 }
 
-// nodeFSM creates an instance of NodeFSM
-func nodeFSM(name string, meta *internalpb.NodeMeta) *NodeFSM {
-	return &NodeFSM{
+// newDelegate creates an instance of delegate
+func newDelegate(name string, meta *internalpb.NodeMeta) *delegate {
+	return &delegate{
 		RWMutex:  sync.RWMutex{},
 		nodeMeta: meta,
 		self:     name,

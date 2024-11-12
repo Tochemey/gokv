@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package cluster
+package gokv
 
 import (
 	"os"
@@ -66,8 +66,16 @@ type Config struct {
 	// specifies the read timeout. This is how long to wait before timing out when reading
 	// a given key
 	readTimeout time.Duration
-	// security specifies whether to encrypt the data
-	security *Security
+	// specifies the secrets
+	// A list of base64 encoded keys. Each key should be either 16, 24, or 32 bytes
+	// when decoded to select AES-128, AES-192, or AES-256 respectively.
+	// The first key in the list will be used for encrypting outbound messages. All keys are
+	// attempted when decrypting gossip, which allows for rotations.
+	secretKeys []string
+	// cookie is a set of bytes to use as authentication label
+	// This has to be the same within the cluster to ensure smooth GCM authenticated data
+	// reference: https://en.wikipedia.org/wiki/Galois/Counter_Mode
+	cookie string
 }
 
 // enforce compilation error
@@ -155,9 +163,19 @@ func (config *Config) WithCleanerJobInterval(interval time.Duration) *Config {
 	return config
 }
 
-// WithSecurity sets the security of the config
-func (config *Config) WithSecurity(security *Security) *Config {
-	config.security = security
+// WithEncryption defines the cookie and the secret keys
+// cookie is a set of bytes to use as authentication label
+// This has to be the same within the cluster to ensure smooth GCM authenticated data
+// reference: https://en.wikipedia.org/wiki/Galois/Counter_Mode
+//
+// A list of base64 encoded keys. Each key should be either 16, 24, or 32 bytes
+// when decoded to select AES-128, AES-192, or AES-256 respectively.
+// The first key in the list will be used for encrypting outbound messages. All keys are
+// attempted when decrypting gossip, which allows for rotations.
+// These keys should be the same for all nodes in the cluster
+func (config *Config) WithEncryption(cookie string, secretKeys []string) *Config {
+	config.secretKeys = secretKeys
+	config.cookie = cookie
 	return config
 }
 
@@ -171,6 +189,7 @@ func (config *Config) Validate() error {
 		AddAssertion(config.maxJoinAttempts > 0, "max join attempts is invalid").
 		AddAssertion(config.syncInterval > 0, "stateSync interval is invalid").
 		AddValidator(validation.NewEmptyStringValidator("host", config.host)).
-		AddValidator(validation.NewConditionalValidator(config.security != nil, config.security)).
+		AddValidator(validation.NewConditionalValidator(len(config.secretKeys) != 0,
+			validation.NewEmptyStringValidator("config.cookie", config.cookie))).
 		Validate()
 }

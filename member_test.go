@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2024 Tochemey
+ * Copyright (c) 2024 Arsene Tochemey Gandote
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package cluster
+package gokv
 
 import (
 	"reflect"
@@ -73,7 +73,7 @@ func TestMemberFromMeta(t *testing.T) {
 		CreatedAt:     creationTime,
 	}
 
-	actual, err := MemberFromMeta(bytea)
+	actual, err := memberFromMeta(bytea)
 	require.NoError(t, err)
 	require.NotNil(t, actual)
 	assert.IsType(t, new(Member), actual)
