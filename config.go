@@ -40,6 +40,7 @@ type Config struct {
 	maxJoinAttempts int
 	// specifies the join retry interval
 	joinRetryInterval time.Duration
+	joinTimeout       time.Duration
 	// specifies the discovery provider
 	provider discovery.Provider
 	// specifies the node client port
@@ -89,9 +90,10 @@ func NewConfig() *Config {
 		maxJoinAttempts:   5,
 		joinRetryInterval: time.Second,
 		shutdownTimeout:   3 * time.Second,
+		joinTimeout:       time.Minute,
 		syncInterval:      time.Minute,
 		logger:            log.New(log.ErrorLevel, os.Stderr),
-		readTimeout:       time.Second,
+		readTimeout:       time.Minute,
 	}
 }
 
@@ -143,7 +145,12 @@ func (config *Config) WithHost(host string) *Config {
 	return config
 }
 
-// WithSyncInterval sets the delegate sync interval
+// WithSyncInterval sets the cluster synchronization interval.
+// This is the interval between complete states synchronization between nodes.
+// Complete states synchronization are done with a single node over TCP and are
+// quite expensive relative to standard gossiped messages.
+// Setting this interval lower (more frequent) will increase convergence
+// speeds across larger clusters at the expense of increased bandwidth usage.
 func (config *Config) WithSyncInterval(interval time.Duration) *Config {
 	config.syncInterval = interval
 	return config
@@ -151,6 +158,7 @@ func (config *Config) WithSyncInterval(interval time.Duration) *Config {
 
 // WithReadTimeout sets the Node read timeout.
 // This timeout specifies the timeout of a data retrieval
+// The read timeout should be either greater or equal to syncInterval
 func (config *Config) WithReadTimeout(timeout time.Duration) *Config {
 	config.readTimeout = timeout
 	return config
@@ -186,8 +194,11 @@ func (config *Config) Validate() error {
 		AddAssertion(config.provider != nil, "discovery provider is not set").
 		AddAssertion(config.joinRetryInterval > 0, "join retry interval is invalid").
 		AddAssertion(config.shutdownTimeout > 0, "shutdown timeout is invalid").
+		AddAssertion(config.joinTimeout > 0, "join timeout is invalid").
 		AddAssertion(config.maxJoinAttempts > 0, "max join attempts is invalid").
 		AddAssertion(config.syncInterval > 0, "stateSync interval is invalid").
+		AddAssertion(config.readTimeout > 0, "read timeout is invalid").
+		AddAssertion(config.joinTimeout > config.joinRetryInterval, "join timeout must greater than join retry interval").
 		AddValidator(validation.NewEmptyStringValidator("host", config.host)).
 		AddValidator(validation.NewConditionalValidator(len(config.secretKeys) != 0,
 			validation.NewEmptyStringValidator("config.cookie", config.cookie))).
