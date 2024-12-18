@@ -251,6 +251,8 @@ func startNode(t *testing.T, serverAddr string) (*Node, discovery.Provider) {
 		host:              host,
 		syncInterval:      500 * time.Millisecond,
 		joinRetryInterval: 500 * time.Millisecond,
+		joinTimeout:       time.Second,
+		readTimeout:       500 * time.Millisecond,
 		maxJoinAttempts:   5,
 		cookie:            cookie,
 		secretKeys:        []string{b64},

@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/flowchartsman/retry"
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/atomic"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -156,7 +157,7 @@ func (node *Node) Start(ctx context.Context) error {
 		AddError(node.config.Validate()).
 		AddError(node.config.provider.Initialize()).
 		AddError(node.config.provider.Register()).
-		AddError(node.join()).
+		AddError(node.join(ctx)).
 		AddError(node.serve(ctx)).
 		Error(); err != nil {
 		node.mu.Unlock()
@@ -231,7 +232,6 @@ func (node *Node) Put(ctx context.Context, request *connect.Request[internalpb.P
 }
 
 // Get is used to retrieve a key/value pair in a cluster of nodes
-// nolint
 func (node *Node) Get(ctx context.Context, request *connect.Request[internalpb.GetRequest]) (*connect.Response[internalpb.GetResponse], error) {
 	node.mu.Lock()
 	if !node.started.Load() {
@@ -239,9 +239,28 @@ func (node *Node) Get(ctx context.Context, request *connect.Request[internalpb.G
 		return nil, connect.NewError(connect.CodeFailedPrecondition, ErrNodeNotStarted)
 	}
 
+	ctx, cancelFn := context.WithTimeout(ctx, node.config.readTimeout)
+	defer cancelFn()
+
 	req := request.Msg
-	entry, err := node.delegate.Get(req.GetKey())
-	if err != nil {
+	var (
+		rerr  error
+		entry *internalpb.Entry
+	)
+
+	retrier := retry.NewRetrier(2, node.config.readTimeout, node.config.syncInterval)
+	if err := retrier.RunContext(ctx, func(ctx context.Context) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			entry, rerr = node.delegate.Get(req.GetKey())
+			if rerr != nil {
+				return rerr
+			}
+		}
+		return nil
+	}); err != nil {
 		node.mu.Unlock()
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
@@ -342,13 +361,14 @@ func (node *Node) Peers() ([]*Member, error) {
 // serve start the underlying http server
 func (node *Node) serve(ctx context.Context) error {
 	// extract the actual TCP ip discoveryAddress
-	host, port, err := tcp.GetHostPort(fmt.Sprintf("%s:%d", node.config.host, node.config.port))
+	hostPort := net.JoinHostPort(node.config.host, strconv.Itoa(int(node.config.port)))
+	bindIP, err := tcp.GetBindIP(hostPort)
 	if err != nil {
 		return fmt.Errorf("failed to resolve TCP discoveryAddress: %w", err)
 	}
 
-	node.config.WithHost(host)
-	node.config.WithPort(uint16(port))
+	node.config.WithHost(bindIP)
+	node.config.WithPort(uint16(node.config.port))
 
 	// hook the node as the KV service handler
 	// TODO: add metric options to the handler
@@ -372,19 +392,28 @@ func (node *Node) serve(ctx context.Context) error {
 }
 
 // join attempts to join an existing cluster if node peers is provided
-func (node *Node) join() error {
+func (node *Node) join(ctx context.Context) error {
 	mlist, err := memberlist.Create(node.memberConfig)
 	if err != nil {
 		node.config.logger.Error(fmt.Errorf("failed to create memberlist: %w", err))
 		return err
 	}
 
-	// TODO: use a retry mechanism here
-	peers, err := node.config.provider.DiscoverPeers()
-	if err != nil {
-		node.config.logger.Error(fmt.Errorf("failed to discover peers: %w", err))
+	ctx2, cancel := context.WithTimeout(ctx, node.config.joinTimeout)
+	var peers []string
+	retrier := retry.NewRetrier(node.config.maxJoinAttempts, node.config.joinRetryInterval, node.config.joinRetryInterval)
+	if err := retrier.RunContext(ctx2, func(ctx context.Context) error { // nolint
+		peers, err = node.config.provider.DiscoverPeers()
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		cancel()
 		return err
 	}
+
+	cancel()
 
 	// set the mlist
 	node.memberlist = mlist
