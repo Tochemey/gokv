@@ -32,6 +32,7 @@ import (
 	"net"
 	nethttp "net/http"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -66,6 +67,7 @@ type Node struct {
 	// through memberlist this delegate will be eventually gossiped to the rest of the cluster
 	delegate *delegate
 
+	meta         *internalpb.NodeMeta
 	memberConfig *memberlist.Config
 	memberlist   *memberlist.Memberlist
 
@@ -117,6 +119,7 @@ func newNode(config *Config) (*Node, error) {
 		}
 	}
 
+	// create the node meta
 	meta := &internalpb.NodeMeta{
 		Name:          mconfig.Name,
 		Host:          config.host,
@@ -132,6 +135,7 @@ func newNode(config *Config) (*Node, error) {
 	node := &Node{
 		mu:                 new(sync.Mutex),
 		delegate:           delegate,
+		meta:               meta,
 		memberConfig:       mconfig,
 		started:            atomic.NewBool(false),
 		eventsChan:         make(chan *Event, 1),
@@ -356,6 +360,49 @@ func (node *Node) Peers() ([]*Member, error) {
 		}
 	}
 	return members, nil
+}
+
+// Leader returns the eldest member of the cluster
+// Leadership here is based upon node time creation
+func (node *Node) Leader() (*Member, error) {
+	peers, err := node.Peers()
+	if err != nil {
+		return nil, err
+	}
+	node.mu.Lock()
+	meta := node.meta
+	node.mu.Unlock()
+
+	peers = append(peers, &Member{
+		Name:          meta.GetName(),
+		Host:          meta.GetHost(),
+		Port:          uint16(meta.GetPort()),
+		DiscoveryPort: uint16(meta.GetDiscoveryPort()),
+		CreatedAt:     meta.GetCreationTime().AsTime(),
+	})
+
+	slices.SortStableFunc(peers, func(a, b *Member) int {
+		if a.CreatedAt.Unix() < b.CreatedAt.Unix() {
+			return -1
+		}
+		return 1
+	})
+
+	return peers[0], nil
+}
+
+// Whoami returns the node member data
+func (node *Node) Whoami() *Member {
+	node.mu.Lock()
+	meta := node.meta
+	node.mu.Unlock()
+	return &Member{
+		Name:          meta.GetName(),
+		Host:          meta.GetHost(),
+		Port:          uint16(meta.GetPort()),
+		DiscoveryPort: uint16(meta.GetDiscoveryPort()),
+		CreatedAt:     meta.GetCreationTime().AsTime(),
+	}
 }
 
 // serve start the underlying http server

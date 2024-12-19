@@ -151,6 +151,13 @@ L:
 	require.NoError(t, err)
 	require.Len(t, peers, 1)
 	require.Equal(t, node2.HostPort(), peers[0].DiscoveryAddress())
+	me := node1.Whoami()
+	require.NotNil(t, me)
+	require.Equal(t, node1.HostPort(), me.DiscoveryAddress())
+	leader, err := node2.Leader()
+	require.NoError(t, err)
+	require.NotNil(t, leader)
+	require.Equal(t, node1.HostPort(), leader.DiscoveryAddress())
 
 	// wait for some time
 	lib.Pause(time.Second)
