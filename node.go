@@ -50,6 +50,7 @@ import (
 	"github.com/tochemey/gokv/internal/internalpb/internalpbconnect"
 	"github.com/tochemey/gokv/internal/lib"
 	"github.com/tochemey/gokv/internal/tcp"
+	"github.com/tochemey/gokv/internal/transport"
 )
 
 const (
@@ -118,6 +119,27 @@ func newNode(config *Config) (*Node, error) {
 			}
 		}
 	}
+
+	// Set transport
+	tConfig := transport.Config{
+		BindAddrs:          []string{mconfig.BindAddr},
+		BindPort:           mconfig.BindPort,
+		PacketDialTimeout:  5 * time.Second,
+		PacketWriteTimeout: 5 * time.Second,
+		Logger:             config.logger,
+	}
+
+	if config.tlConfig != nil {
+		tConfig.TLSEnabled = true
+		tConfig.TLS = config.tlConfig
+	}
+
+	transport, err := transport.NewTCP(tConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	mconfig.Transport = transport
 
 	// create the node meta
 	meta := &internalpb.NodeMeta{
@@ -462,7 +484,7 @@ func (node *Node) join(ctx context.Context) error {
 
 	cancel()
 
-	// set the mlist
+	// set the transport
 	node.memberlist = mlist
 	if len(peers) > 0 {
 		if _, err := node.memberlist.Join(peers); err != nil {

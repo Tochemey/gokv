@@ -6,20 +6,28 @@ Simple Distributed in-memory key/value store.
 GoKV provides high availability and fault tolerance which makes it suitable large-scale applications system without sacrificing performance and reliability. 
 With GoKV, you can instantly create a fast, scalable, distributed system  across a cluster of computers. 
 
-## Installation
+## 👋 Table Of Content
+- [Installation](#-installation)
+- [Design](#-design)
+- [Features](#-features)
+- [Use Cases](#-use-cases)
+- [Example](#-example)
+- [Discovery](#-builtin-discovery)
+
+## 🖥️ Installation
 
 ```bash
 go get github.com/tochemey/gokv
 ```
 
-## Design
+## 🏛️ Design
 
 Go-KV is designed to distribute key/value pair in a cluster of computers using push-pull anti-entropy method to replicate nodes' state across the cluster.
 When a data entry is changed on a node the full state of that entry is replicated to other nodes.
 This approach makes Go-KV eventually consistent. However, at some point in time the cluster will be in complete synchronised state. For frequent state synchronisation
 one can set the [`syncInterval`](./cluster/config.go) value to a low value. The downside of a low value is that it will increase network traffic.
 
-## Features
+## 🎯 Features
 - Built-in [client](./cluster/client.go) to interact with the cluster via the following apis:
   - `Put`: create key/value pair that is eventually distributed in the cluster of nodes. The `key` is a string and the `value` is a byte array. One can set an expiry to the key.
   - `PutProto`: to create a key/value pair where the value is a protocol buffer message
@@ -36,21 +44,22 @@ one can set the [`syncInterval`](./cluster/config.go) value to a low value. The 
 - Discovery API to implement custom nodes discovery provider. See: [Discovery](./discovery/provider.go)
 - Data encryption using the `cookie` and the set of `secrets` via the [Config](./config.go)
 - Configuration can be customized. See [Config](./config.go)
+- TLS Support. See [Config](./config.go)
 - Comes bundled with some discovery providers that can help you hit the ground running:
     - [kubernetes](https://kubernetes.io/docs/home/) [api integration](./discovery/kubernetes) is fully functional
     - [nats](https://nats.io/) [integration](./discovery/nats) is fully functional
     - [static](./discovery/static) is fully functional and for demo purpose
     - [dns](./discovery/dnssd) is fully functional
 
-## Use Cases
+## 💡 Use Cases
 
 - Distributed cache
 
-## Example
+## 📋 Example
 
 There is an example on how to use it with NATs [here](./example/example.go)
 
-## Builtin Discovery
+## 🌐 Builtin Discovery
 
 ### nats
 

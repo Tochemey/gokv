@@ -25,6 +25,7 @@
 package gokv
 
 import (
+	"crypto/tls"
 	"os"
 	"time"
 
@@ -77,6 +78,8 @@ type Config struct {
 	// This has to be the same within the cluster to ensure smooth GCM authenticated data
 	// reference: https://en.wikipedia.org/wiki/Galois/Counter_Mode
 	cookie string
+
+	tlConfig *tls.Config
 }
 
 // enforce compilation error
@@ -184,6 +187,18 @@ func (config *Config) WithCleanerJobInterval(interval time.Duration) *Config {
 func (config *Config) WithEncryption(cookie string, secretKeys []string) *Config {
 	config.secretKeys = secretKeys
 	config.cookie = cookie
+	return config
+}
+
+// WithTLS configures TLS settings for both the Server and Client.
+// Ensure that both the Server and Client are configured with the same
+// root Certificate Authority (CA) to enable successful handshake and
+// mutual authentication.
+//
+// In cluster mode, all nodes must share the same root CA to establish
+// secure communication and complete handshakes successfully.
+func (config *Config) WithTLS(tlConfig *tls.Config) *Config {
+	config.tlConfig = tlConfig
 	return config
 }
 
