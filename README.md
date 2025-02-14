@@ -11,6 +11,7 @@ With GoKV, you can instantly create a fast, scalable, distributed system  across
 - [Design](#-design)
 - [Features](#-features)
 - [Use Cases](#-use-cases)
+- [Trade-offs](#-trade-offs)
 - [Example](#-example)
 - [Discovery](#-builtin-discovery)
 
@@ -22,10 +23,13 @@ go get github.com/tochemey/gokv
 
 ## 🏛️ Design
 
-Go-KV is designed to distribute key/value pair in a cluster of computers using push-pull anti-entropy method to replicate nodes' state across the cluster.
-When a data entry is changed on a node the full state of that entry is replicated to other nodes.
-This approach makes Go-KV eventually consistent. However, at some point in time the cluster will be in complete synchronised state. For frequent state synchronisation
-one can set the [`syncInterval`](./cluster/config.go) value to a low value. The downside of a low value is that it will increase network traffic.
+Go-KV is a distributed key/value store designed to synchronize data across a cluster of computers using the push-pull anti-entropy method.
+This ensures that updates made to a node are eventually propagated to all other nodes, maintaining eventual consistency within the system.
+Whenever a key/value entry is modified on any node, the entire state of that entry is replicated across the cluster.
+While Go-KV does not guarantee immediate consistency, it ensures that all nodes will converge to the same state over time.
+To control the frequency of synchronization, Go-KV provides a configurable parameter:`syncInterval` that defines how often nodes exchange data to reconcile differences. 
+- Lower values lead to faster synchronization but increase network traffic. 
+- Higher values reduce network overhead but may lead to longer delays in data propagation.
 
 ## 🎯 Features
 - Built-in [client](./cluster/client.go) to interact with the cluster via the following apis:
@@ -53,7 +57,19 @@ one can set the [`syncInterval`](./cluster/config.go) value to a low value. The 
 
 ## 💡 Use Cases
 
-- Distributed cache
+Go-KV is suitable for scenarios where high availability and fault tolerance are more critical than strict consistency, such as:
+
+- Service Discovery
+- Configuration Management
+- Decentralized Coordination
+- Distributed Caching
+
+## ⚖️ Trade-offs
+
+- ✅ Highly Available – Nodes remain operational even in the presence of network partitions. 
+- ✅ Fault Tolerant – Can recover from node failures without losing data permanently. 
+- ❌ Eventual Consistency – No immediate guarantees that all nodes have the same data at any given moment. 
+- ❌ Increased Network Traffic – Lower syncInterval values can lead to higher bandwidth usage.
 
 ## 📋 Example
 
