@@ -131,8 +131,8 @@ func (config *Config) WithShutdownTimeout(timeout time.Duration) *Config {
 }
 
 // WithMaxJoinAttempts sets the max join attempts
-func (config *Config) WithMaxJoinAttempts(max int) *Config {
-	config.maxJoinAttempts = max
+func (config *Config) WithMaxJoinAttempts(maxAttempts int) *Config {
+	config.maxJoinAttempts = maxAttempts
 	return config
 }
 

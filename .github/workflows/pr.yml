@@ -37,18 +37,17 @@ jobs:
       - name: Run tests
         run: |
           go-acc ./... -o coverage.out --ignore internal/internalpb,test/data/testpb -- -mod=vendor -race -v
-#  lint:
-#    runs-on: ubuntu-latest
-#    timeout-minutes: 10
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: actions/setup-go@v5
-#        with:
-#          go-version: '>=1.22.0'
-#          check-latest: false
-#          cache-dependency-path: "**/*.sum"
-#      - name: golangci-lint
-#        uses: golangci/golangci-lint-action@v6
-#        with:
-#          version: v1.60.1
-#          args: --timeout 10m --config .golangci.yml
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: false
+          cache-dependency-path: "**/*.sum"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
