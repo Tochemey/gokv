@@ -3,7 +3,6 @@ run:
   concurrency: 4
   issues-exit-code: 2
   tests: true
-  modules-download-mode: vendor
   relative-path-mode: gomod
   timeout: 10m
   # Route hashicorp/go-metrics/compat (pulled in via memberlist) through
