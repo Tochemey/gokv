@@ -49,8 +49,8 @@ import (
 	"github.com/tochemey/gokv/internal/internalpb"
 	"github.com/tochemey/gokv/internal/internalpb/internalpbconnect"
 	"github.com/tochemey/gokv/internal/lib"
+	"github.com/tochemey/gokv/internal/mtransport"
 	"github.com/tochemey/gokv/internal/tcp"
-	"github.com/tochemey/gokv/internal/transport"
 )
 
 const (
@@ -121,7 +121,7 @@ func newNode(config *Config) (*Node, error) {
 	}
 
 	// Set transport
-	tConfig := transport.Config{
+	tConfig := mtransport.Config{
 		BindAddrs:          []string{mconfig.BindAddr},
 		BindPort:           mconfig.BindPort,
 		PacketDialTimeout:  5 * time.Second,
@@ -134,7 +134,7 @@ func newNode(config *Config) (*Node, error) {
 		tConfig.TLS = config.tlConfig
 	}
 
-	transport, err := transport.NewTCP(tConfig)
+	transport, err := mtransport.NewTCP(tConfig)
 	if err != nil {
 		return nil, err
 	}

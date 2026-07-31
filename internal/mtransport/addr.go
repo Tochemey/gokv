@@ -22,31 +22,24 @@
  * SOFTWARE.
  */
 
-package transport
+package mtransport
 
-import (
-	"crypto/tls"
-	"time"
+type messageType uint8
 
-	"github.com/tochemey/gokv/log"
+const (
+	_ messageType = iota // don't use 0
+	packet
+	stream
 )
 
-// Config is used to configure a net transport.
-type Config struct {
-	// BindAddrs is a list of addresses to bind to for both TCP and UDP
-	// communications.
-	BindAddrs []string
+const zeroZeroZeroZero = "0.0.0.0"
 
-	// BindPort is the port to listen on, for each address above.
-	BindPort int
+type addr string
 
-	PacketDialTimeout  time.Duration
-	PacketWriteTimeout time.Duration
+func (a addr) Network() string {
+	return "tcp"
+}
 
-	// Logger is a logger for operator messages.
-	Logger log.Logger
-
-	TLSEnabled   bool
-	TLS          *tls.Config
-	DebugEnabled bool
+func (a addr) String() string {
+	return string(a)
 }

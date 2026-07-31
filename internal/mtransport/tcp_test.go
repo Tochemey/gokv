@@ -22,7 +22,7 @@
  * SOFTWARE.
  */
 
-package transport
+package mtransport
 
 import (
 	"crypto/tls"
