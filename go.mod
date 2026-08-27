@@ -10,7 +10,7 @@ require (
 	github.com/hashicorp/memberlist v0.6.0
 	github.com/kapetan-io/tackle v0.15.0
 	github.com/nats-io/nats-server/v2 v2.14.4
-	github.com/nats-io/nats.go v1.52.0
+	github.com/nats-io/nats.go v1.53.1
 	github.com/stretchr/testify v1.12.1
 	github.com/travisjeffery/go-dynaport v1.0.0
 	go.uber.org/atomic v1.11.0
