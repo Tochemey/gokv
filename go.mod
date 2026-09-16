@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	connectrpc.com/connect v1.21.0
 	github.com/deckarep/golang-set/v2 v2.9.0
+	github.com/deckarep/golang-set/v3 v3.0.0
 	github.com/flowchartsman/retry v1.2.0
 	github.com/hashicorp/go-sockaddr v1.0.7
 	github.com/hashicorp/memberlist v0.7.0
