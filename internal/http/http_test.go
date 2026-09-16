@@ -32,17 +32,19 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/travisjeffery/go-dynaport"
-	"golang.org/x/net/http2"
 )
 
 func TestNewClient(t *testing.T) {
 	cl := NewClient()
 	assert.IsType(t, new(http.Client), cl)
-	assert.IsType(t, new(http2.Transport), cl.Transport)
-	tr := cl.Transport.(*http2.Transport)
-	assert.True(t, tr.AllowHTTP)
-	assert.Equal(t, 30*time.Second, tr.PingTimeout)
-	assert.Equal(t, 30*time.Second, tr.ReadIdleTimeout)
+	assert.IsType(t, new(http.Transport), cl.Transport)
+	tr := cl.Transport.(*http.Transport)
+	assert.NotNil(t, tr.Protocols)
+	assert.True(t, tr.Protocols.UnencryptedHTTP2())
+	assert.False(t, tr.Protocols.HTTP1())
+	assert.NotNil(t, tr.HTTP2)
+	assert.Equal(t, 30*time.Second, tr.HTTP2.PingTimeout)
+	assert.Equal(t, 30*time.Second, tr.HTTP2.SendPingTimeout)
 }
 
 func TestNewServer(t *testing.T) {

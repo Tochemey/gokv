@@ -26,33 +26,33 @@ package http
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
 	"strconv"
 	"time"
-
-	"golang.org/x/net/http2"
 )
 
 // NewClient creates a http client use h2c
 func NewClient() *http.Client {
+	// Speak unencrypted HTTP/2 (h2c) with prior knowledge. Enabling only
+	// UnencryptedHTTP2, and not HTTP1, makes the standard library transport
+	// use h2c for http:// URLs without a TLS handshake.
+	protocols := new(http.Protocols)
+	protocols.SetUnencryptedHTTP2(true)
 	return &http.Client{
 		// Most RPC servers don't use HTTP redirects
 		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
-		Transport: &http2.Transport{
-			AllowHTTP: true,
-			DialTLSContext: func(_ context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-				// If you're also using this client for non-h2c traffic, you may want to
-				// delegate to tls.Dial if the network isn't TCP or the addr isn't in an
-				// allow-list.
-				return net.Dial(network, addr)
+		Transport: &http.Transport{
+			Protocols: protocols,
+			HTTP2: &http.HTTP2Config{
+				// Send a health-check ping when no frame has been received for this long.
+				SendPingTimeout: 30 * time.Second,
+				// Close the connection when a ping goes unanswered for this long.
+				PingTimeout: 30 * time.Second,
 			},
-			PingTimeout:     30 * time.Second,
-			ReadIdleTimeout: 30 * time.Second,
 		},
 	}
 }
