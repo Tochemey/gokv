@@ -7,7 +7,7 @@ require (
 	github.com/deckarep/golang-set/v2 v2.9.0
 	github.com/flowchartsman/retry v1.2.0
 	github.com/hashicorp/go-sockaddr v1.0.7
-	github.com/hashicorp/memberlist v0.6.0
+	github.com/hashicorp/memberlist v0.7.0
 	github.com/kapetan-io/tackle v0.15.0
 	github.com/nats-io/nats-server/v2 v2.14.4
 	github.com/nats-io/nats.go v1.52.0
@@ -17,7 +17,7 @@ require (
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/net v0.58.0
-	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af
+	google.golang.org/protobuf v1.36.12
 	k8s.io/api v0.37.0
 	k8s.io/apimachinery v0.37.0
 	k8s.io/client-go v0.37.0
@@ -50,13 +50,13 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
-	github.com/hashicorp/go-metrics v0.6.1 // indirect
+	github.com/hashicorp/go-metrics v0.7.0 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.1.5 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.19.1 // indirect
-	github.com/miekg/dns v1.1.72 // indirect
+	github.com/miekg/dns v1.1.73 // indirect
 	github.com/minio/highwayhash v1.0.4 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
