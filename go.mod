@@ -13,7 +13,7 @@ require (
 	github.com/nats-io/nats.go v1.53.1
 	github.com/stretchr/testify v1.12.1
 	github.com/travisjeffery/go-dynaport v1.0.0
-	go.uber.org/atomic v1.11.0
+	go.uber.org/atomic v1.12.0
 	go.uber.org/multierr v1.11.0
 	go.uber.org/zap v1.28.0
 	google.golang.org/protobuf v1.36.12
