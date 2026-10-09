@@ -87,6 +87,8 @@ github.com/kapetan-io/tackle v0.15.0 h1:J+D04RuxEKtybzCjuzgcmQuFBiEpYa+5vPU2mAgA
 github.com/kapetan-io/tackle v0.15.0/go.mod h1:pDr4mjpo2RQO/q/je1dGuGwnBVwZcsRp60wgDV2hA3c=
 github.com/klauspost/compress v1.20.0 h1:a3C1ke2ohxFymNlb2HWAHjDeKCI90scRskErZkR0ezA=
 github.com/klauspost/compress v1.20.0/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
+github.com/klauspost/compress v1.20.1 h1:T7kKElXUMXrUJ2E9QhQhxFtcK5rPyLdsGZvdbLMPdiQ=
+github.com/klauspost/compress v1.20.1/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
 github.com/miekg/dns v1.1.73 h1:uhT8nJxmTrPJYClxVxTCX+CVn6qnzSiybRk72Z6DgrE=
 github.com/miekg/dns v1.1.73/go.mod h1:RW2Obtfd5NZHvOFe3zYG0W8koWOQtAzyHaLo8vASBuQ=
 github.com/minio/highwayhash v1.0.4 h1:asJizugGgchQod2ja9NJlGOWq4s7KsAWr5XUc9Clgl4=
@@ -105,6 +107,8 @@ github.com/nats-io/nats-server/v2 v2.14.7 h1:ojHP8O4vIFRJtwZJ1a5ETx+aWpzEjZiu+UC
 github.com/nats-io/nats-server/v2 v2.14.7/go.mod h1:5qLF4CDGzZVFt//3fUrY1ePpwbi05r7QHPNroSUtolk=
 github.com/nats-io/nats-server/v2 v2.15.0 h1:M99yf0y05rTr46/qc/Is6ZAowI58Ryp2SjufLCUeVJc=
 github.com/nats-io/nats-server/v2 v2.15.0/go.mod h1:5qLF4CDGzZVFt//3fUrY1ePpwbi05r7QHPNroSUtolk=
+github.com/nats-io/nats-server/v2 v2.15.1 h1:fK3AeYFIji1Smng60jB0hVoAPZezA/UzsaI3BqXFNEI=
+github.com/nats-io/nats-server/v2 v2.15.1/go.mod h1:yeuYRtKVKIFtmMz2/YPk+6hvmNBnk+WwTUzErBdH6IE=
 github.com/nats-io/nats.go v1.53.1 h1:Otsq3uLc/kLdjmkNHkXH0jBqwUquwdKFoe3fq6/3/Xo=
 github.com/nats-io/nats.go v1.53.1/go.mod h1:26HypzazeOkyO3/mqd1zZd53STJN0EjCYF9Uy2ZOBno=
 github.com/nats-io/nats.go v1.54.0 h1:vsXoOxjHp/GmPUN+EcI7uOf/uB+iAP+kEsAFNQN0yzA=
