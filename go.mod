@@ -3,7 +3,7 @@ module github.com/tochemey/gokv
 go 1.26.0
 
 require (
-	connectrpc.com/connect v1.21.1
+	connectrpc.com/connect/v2 v2.0.2
 	connectrpc.com/connect/v2 v2.0.2
 	github.com/deckarep/golang-set/v3 v3.0.0
 	github.com/flowchartsman/retry v1.2.0
